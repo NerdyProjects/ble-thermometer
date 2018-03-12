@@ -5,7 +5,7 @@
     (no_connects 3)
     (area 105.299999 107.399999 129.200001 122.100001)
     (thickness 1.6)
-    (drawings 25)
+    (drawings 26)
     (tracks 113)
     (zones 0)
     (modules 14)
@@ -711,6 +711,9 @@
     )
   )
 
+  (gr_text github.com/NerdyProjects/ble-thermometer (at 116.5 108) (layer F.SilkS)
+    (effects (font (size 0.5 0.5) (thickness 0.1)))
+  )
   (gr_text "Matthias Larisch" (at 123.1 121) (layer F.SilkS)
     (effects (font (size 0.5 0.5) (thickness 0.1)))
   )
