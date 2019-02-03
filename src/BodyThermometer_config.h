@@ -26,10 +26,10 @@
 
 #if defined (ST_OTA_LOWER_APPLICATION) || defined (ST_OTA_HIGHER_APPLICATION)
 /* Number of services requests from the Sensor demo */
-#define NUM_APP_GATT_SERVICES (2 + 1) /* 2 Sensor services + 1 OTA service */
+#define NUM_APP_GATT_SERVICES (1 + 1) /* 2 Sensor services + 1 OTA service */
 
 /* Number of attributes requests from the chat demo */
-#define NUM_APP_GATT_ATTRIBUTES (15 + 9) /* 15 attributes x BLE Sensor demo services characteristics + 9 for OTA Service characteristics */
+#define NUM_APP_GATT_ATTRIBUTES (7 + 9) /* 15 attributes x BLE Sensor demo services characteristics + 9 for OTA Service characteristics */
 
 /**
  * Set the number of 16-bytes units used on an OTA FW data packet for matching OTA client MAX ATT_MTU
@@ -42,10 +42,10 @@
 #else /* NO OTA Service is required */
 
 /* Number of services requests from the sensor demo */
-#define NUM_APP_GATT_SERVICES 2
+#define NUM_APP_GATT_SERVICES 1
 
 /* Number of attributes requests from the sensor demo */
-#define NUM_APP_GATT_ATTRIBUTES 15
+#define NUM_APP_GATT_ATTRIBUTES 7
 
 /* OTA characteristics maximum lenght */
 #define OTA_MAX_ATT_SIZE (0) 

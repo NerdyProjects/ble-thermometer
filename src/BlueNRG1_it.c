@@ -45,11 +45,6 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-#ifndef SENSOR_EMULATION
-
-extern LSM6DS3_DrvExtTypeDef *Imu6AxesDrvExt;
-
-#endif
 
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
@@ -100,23 +95,7 @@ void SysTick_Handler(void)
 
 void GPIO_Handler(void)
 {
-#ifndef SENSOR_EMULATION
-  uint8_t free_fall_status; 
-  /* Check if GPIO pin 12 interrupt event occured */
-  if(GPIO_GetITPendingBit(LSM6DS3_IRQ_PIN) == SET) 
-  {
-    /* Clear the IRQ pending bit */
-    GPIO_ClearITPendingBit(LSM6DS3_IRQ_PIN);
-    
-    /* Set the IRQ flag */
-    Imu6AxesDrvExt->Get_Status_Free_Fall_Detection(&free_fall_status);
-    if (free_fall_status == 1)
-    {
-      request_free_fall_notify = TRUE;
-    }
 
-  }  
-#endif 
 }
 /******************************************************************************/
 /*                 BlueNRG-1 Peripherals Interrupt Handlers                   */

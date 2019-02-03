@@ -108,14 +108,14 @@ extern "C"
  * @note Uncomment the following line to disable it
  */
 #ifndef BMP280_DISABLE_DOUBLE_COMPENSATION
-/* #define BMP280_DISABLE_DOUBLE_COMPENSATION */
+#define BMP280_DISABLE_DOUBLE_COMPENSATION
 #endif
 
 /*! @name Macro to disable 64bit compensation
  * @note Uncomment the following line to disable it
  */
 #ifndef BMP280_DISABLE_64BIT_COMPENSATION
-/* #define BMP280_DISABLE_64BIT_COMPENSATION */
+#define BMP280_DISABLE_64BIT_COMPENSATION
 #endif
 
 /*! @name Interface selection macros */
