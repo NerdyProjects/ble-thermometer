@@ -197,7 +197,7 @@
 #include "ble_const.h"
 #include "SDK_EVAL_Config.h"
 #include "OTA_btl.h" 
-#include "BluenRG1_flash.h"
+#include "BlueNRG1_flash.h"
 #include "bluenrg1_it_stub.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -222,6 +222,29 @@ extern volatile uint32_t ota_sw_activation;
 /* Private function prototypes -----------------------------------------------*/
 
 /**
+* @brief  It check if  flash storage area has to be erased or not
+* @param  None.
+* @retval Status: 1 (erase flash); 0 (don't erase flash).
+*
+* @note The API code could be subject to change in future releases.
+*/
+static uint8_t OTA_Check_Storage_Area(uint32_t start_address, uint32_t end_address)
+{
+  volatile uint32_t *address; 
+  uint32_t i; 
+  
+  for(i=start_address;i<end_address; i = i +4)
+  { 
+    address = (volatile uint32_t *) i;
+    if (*address != 0xFFFFFFFF)
+      return 1; /* do flash erase */
+  }
+  
+  return 0; /* no flash erase is required */
+}
+
+
+/**
 * @brief  It erases destination flash erase before starting OTA upgrade session. 
 * @param  None.
 * @retval None.
@@ -243,27 +266,19 @@ static void OTA_Erase_Flash(uint16_t startNumber, uint16_t endNumber)
 * @brief  It checks the runtime operation type and set the related OTA tags 
 *         for handling the proper jumping to the valid application. 
 * @param  None
-* @retval None
+* @retval 1 to start ServiceManager, 0 otherwise
 *
 * @note The API code could be subject to change in future releases.
 */
-static void OTA_Check_ServiceManager_Operation(void) 
+static uint8_t OTA_Check_ServiceManager_Operation(void) 
 {
   if (ota_sw_activation == OTA_APP_SWITCH_OP_CODE_GO_TO_OTA_SERVICE_MANAGER) //Go to OTA Service manager
   {
-
-    /* Unlock the Flash */
-    flash_sw_lock = FLASH_UNLOCK_WORD;
-    
-    /* Set Invalid valid tag x OTA Application with OTA Service Manager  for allowing jumping to OTA Service manager */
-    FLASH_ProgramWord(APP_WITH_OTA_SERVICE_ADDRESS + OTA_TAG_VECTOR_TABLE_ENTRY_OFFSET, OTA_INVALID_OLD_TAG);
-
-    /* Lock the Flash */
-    flash_sw_lock = FLASH_LOCK_WORD;
-    
     /* Reset Service Manager ram location */ 
     ota_sw_activation = OTA_INVALID_OLD_TAG; 
+    return 1;
   }
+  return 0;
 }
 
 /**
@@ -301,12 +316,14 @@ int main(void)
   uint8_t ret; 
     
   /* Check Service manager RAM Location to verify if a jump to Service Manager has been set from the Application */
-  OTA_Check_ServiceManager_Operation();
-  
-  /* Identifies the valid application where to jump based on the OTA application validity tags values placed on
-  reserved vector table entry: OTA_TAG_VECTOR_TABLE_ENTRY_INDEX */
-  appAddress = OTA_Check_Application_Tags_Value();
-  
+  if(OTA_Check_ServiceManager_Operation()) {
+    appAddress = APP_OTA_SERVICE_ADDRESS;
+  } else {
+    /* Identifies the valid application where to jump based on the OTA application validity tags values placed on
+    reserved vector table entry: OTA_TAG_VECTOR_TABLE_ENTRY_INDEX */
+    appAddress = OTA_Check_Application_Tags_Value();
+  }
+    
   /* Check if there is a valid application where to jump */
   if (appAddress == APP_WITH_OTA_SERVICE_ADDRESS)
   {
@@ -328,14 +345,12 @@ int main(void)
   /* System Init */
   SystemInit();
   
-  /* Identify BlueNRG1 platform */
-  SdkEvalIdentification();
+  Clock_Init();
   
-  Clock_Init();  
-  SdkEvalComUartInit(UART_BAUDRATE);
-  
-  /* Erase the storage area from start page to end page */
-  OTA_Erase_Flash(APP_WITH_OTA_SERVICE_PAGE_NUMBER_START,APP_WITH_OTA_SERVICE_PAGE_NUMBER_END);
+  /* Erase the storage area from start page to end page if necessary */
+  if(OTA_Check_Storage_Area(APP_WITH_OTA_SERVICE_ADDRESS,APP_WITH_OTA_SERVICE_ADDRESS_END)) {
+    OTA_Erase_Flash(APP_WITH_OTA_SERVICE_PAGE_NUMBER_START,APP_WITH_OTA_SERVICE_PAGE_NUMBER_END);
+  }  
   
   /* BlueNRG-1 stack init */
   ret = BlueNRG_Stack_Initialization(&BlueNRG_Stack_Init_params);
@@ -376,9 +391,6 @@ int main(void)
 
 SleepModes App_SleepMode_Check(SleepModes sleepMode)
 {
-  if(SdkEvalComIOTxFifoNotEmpty() || SdkEvalComUARTBusy())
-    return SLEEPMODE_RUNNING;
-  
   return SLEEPMODE_NOTIMER;
 }
 

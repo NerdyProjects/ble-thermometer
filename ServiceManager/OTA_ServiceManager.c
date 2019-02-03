@@ -21,7 +21,7 @@
 #include "ble_const.h"
 #include "SDK_EVAL_Config.h"
 #include "OTA_btl.h" 
-#include "BluenRG1_flash.h"
+#include "BlueNRG1_flash.h"
 #include <string.h>
 
 /* Private typedef -----------------------------------------------------------*/
