@@ -184,7 +184,6 @@ NOTEs
 /* Includes ------------------------------------------------------------------*/
 
 #include "BlueNRG1_conf.h"
-#include "SDK_EVAL_Config.h"
 #include "bluenrg1_api.h"
 #include "OTA_btl.h"
 #include "bluenrg1_it_stub.h"
@@ -253,7 +252,8 @@ static uint32_t OTA_Check_Application_Tags_Value(void)
       ((TAG_VALUE(APP_LOWER_ADDRESS) == OTA_VALID_TAG) && (TAG_VALUE(APP_HIGHER_ADDRESS) == OTA_INVALID_OLD_TAG))         || /* 2 */
         ((TAG_VALUE(APP_LOWER_ADDRESS) == OTA_VALID_TAG) && (TAG_VALUE(APP_HIGHER_ADDRESS) == OTA_VALID_TAG))               || /* 4 */
           ((TAG_VALUE(APP_LOWER_ADDRESS) == OTA_INVALID_OLD_TAG) && (TAG_VALUE(APP_HIGHER_ADDRESS) == OTA_IN_PROGRESS_TAG))   || /* 8 */
-            ((TAG_VALUE(APP_LOWER_ADDRESS) == OTA_VALID_TAG) && (TAG_VALUE(APP_HIGHER_ADDRESS) == OTA_IN_PROGRESS_TAG)))           /* 9 */  
+            ((TAG_VALUE(APP_LOWER_ADDRESS) == OTA_VALID_TAG) && (TAG_VALUE(APP_HIGHER_ADDRESS) == OTA_IN_PROGRESS_TAG)) ||
+              ((TAG_VALUE(APP_LOWER_ADDRESS) == OTA_VALID_TAG)))           /* 9 */  
   {
     /* Jump to Lower Application */
     appAddress = APP_LOWER_ADDRESS;

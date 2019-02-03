@@ -1,6 +1,6 @@
-BIN = bodythermometer
+BIN = resetmanager
 NRG_LIB_DIR = ../Library/BlueNRG-3.1.0/Library
-DEF := -DSENSOR_EMULATION -DST_OTA_HIGHER_APPLICATION -DLS_SOURCE=LS_SOURCE_EXTERNAL_32KHZ -DSMPS_INDUCTOR=SMPS_INDUCTOR_10uH -DBLUENRG1_DEVICE -DHS_SPEED_XTAL=HS_SPEED_XTAL_32MHZ
+DEF := -DLS_SOURCE=LS_SOURCE_EXTERNAL_32KHZ -DSMPS_INDUCTOR=SMPS_INDUCTOR_10uH -DBLUENRG1_DEVICE -DHS_SPEED_XTAL=HS_SPEED_XTAL_32MHZ
 
 # Library throws a lot of warnings - silence them a bit
 WARNFLAGS = -Wall -Wextra -Wimplicit-function-declaration
@@ -14,9 +14,8 @@ INC= -I$(NRG_LIB_DIR)/hal/inc \
 -I$(NRG_LIB_DIR)/BLE_Application/Utils/inc \
 -I$(NRG_LIB_DIR)/BLE_Application/OTA/inc \
 
-SRC_C = main.c \
-BlueNRG1_it.c \
-$(NRG_LIB_DIR)/BLE_Application/OTA/src/OTA_btl.c \
+SRC_C = OTA_ResetManager_main.c \
+bluenrg1_it_stub.c \
 $(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/BlueNRG1_adc.c \
 $(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/BlueNRG1_adc.c \
 $(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/BlueNRG1_sysCtrl.c \
