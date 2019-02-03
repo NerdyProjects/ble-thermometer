@@ -21,7 +21,6 @@
 #include "ble_const.h"
 #include "SDK_EVAL_Config.h"
 #include "OTA_btl.h" 
-#include "BlueNRG1_flash.h"
 #include <string.h>
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,9 +33,52 @@
 #endif
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+/* peek into OTA_btl.c NewImageCharHandle to be able to detect a starting flash operation */
+extern uint16_t btlNewImageCharHandle;
 static volatile uint8_t set_connectable = 1;
 
 /* Private function prototypes -----------------------------------------------*/
+/**
+* @brief  It check if  flash storage area has to be erased or not
+* @param  None.
+* @retval Status: 1 (erase flash); 0 (don't erase flash).
+*
+* @note The API code could be subject to change in future releases.
+*/
+static uint8_t OTA_Check_Storage_Area(uint32_t start_address, uint32_t end_address)
+{
+  volatile uint32_t *address; 
+  uint32_t i; 
+  
+  for(i=start_address;i<end_address; i = i +4)
+  { 
+    address = (volatile uint32_t *) i;
+    if (*address != 0xFFFFFFFF)
+      return 1; /* do flash erase */
+  }
+  
+  return 0; /* no flash erase is required */
+}
+
+
+/**
+* @brief  It erases destination flash erase before starting OTA upgrade session. 
+* @param  None.
+* @retval None.
+*
+* @note The API code could be subject to change in future releases.
+*/
+static void OTA_Erase_Flash(uint16_t startNumber, uint16_t endNumber)
+{
+  uint16_t k; 
+  
+  for(k=startNumber;k<=endNumber;k++)
+  { 
+    FLASH_ErasePage(k); 
+  }
+  
+}
+
 /*******************************************************************************
 * Function Name  : setConnectable
 * Description    : Enter in connectable mode.
@@ -146,6 +188,17 @@ void aci_gatt_attribute_modified_event(uint16_t Connection_Handle,
                                        uint16_t Attr_Data_Length,
                                        uint8_t Attr_Data[])
 {
+  if(Attr_Handle == btlNewImageCharHandle + 1)
+  {
+    /* Erase the storage area from start page to end page if necessary */
+    if(OTA_Check_Storage_Area(APP_WITH_OTA_SERVICE_ADDRESS,APP_WITH_OTA_SERVICE_ADDRESS_END)) {
+      OTA_Erase_Flash(APP_WITH_OTA_SERVICE_PAGE_NUMBER_START,APP_WITH_OTA_SERVICE_PAGE_NUMBER_END);
+    }
+    /* We Ignore BLE activity here, hopefully we do not disrupt communication as there might be a
+    short pause from higher level programming application anyway */
+    /* Disable potential reset to application */
+    HAL_VTimer_Stop(0);
+  }
   OTA_Write_Request_CB(Connection_Handle, Attr_Handle, Attr_Data_Length, Attr_Data);      
 }
 

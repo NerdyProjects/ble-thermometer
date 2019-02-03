@@ -27,6 +27,7 @@
 /* Uncomment/Comment the line below to enable/disable peripheral header file inclusion */
 
 #include "BlueNRG1_flash.h"
+#include "BlueNRG1_wdg.h"
 #include "BlueNRG1_gpio.h"
 #include "BlueNRG1_dma.h"
 #include "BlueNRG1_uart.h"
