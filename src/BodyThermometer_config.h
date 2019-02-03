@@ -55,7 +55,7 @@
 #define MAX_CHAR_LEN(a,b) ((a) > (b) )? (a) : (b)
 
 /* Application characteristics maximum lenght */
-#define _MAX_ATT_SIZE	(6) 
+#define _MAX_ATT_SIZE	(20) 
 
 /* Set supported max value for attribute size: it is the biggest attribute size enabled by the application. */
 #define APP_MAX_ATT_SIZE	  MAX_CHAR_LEN(OTA_MAX_ATT_SIZE,  _MAX_ATT_SIZE)

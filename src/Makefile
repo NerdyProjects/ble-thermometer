@@ -1,6 +1,6 @@
 BIN = bodythermometer
 NRG_LIB_DIR = ../Library/BlueNRG-3.1.0/Library
-DEF := -DSENSOR_EMULATION -DST_OTA_LOWER_APPLICATION -DLS_SOURCE=LS_SOURCE_EXTERNAL_32KHZ -DSMPS_INDUCTOR=SMPS_INDUCTOR_10uH -DBLUENRG1_DEVICE -DHS_SPEED_XTAL=HS_SPEED_XTAL_32MHZ
+DEF := -DST_USE_OTA_SERVICE_MANAGER_APPLICATION -DLS_SOURCE=LS_SOURCE_EXTERNAL_32KHZ -DSMPS_INDUCTOR=SMPS_INDUCTOR_10uH -DBLUENRG1_DEVICE -DHS_SPEED_XTAL=HS_SPEED_XTAL_32MHZ
 
 OPENOCD = openocd -f interface/stlink.cfg -f target/bluenrg-x.cfg
 
@@ -48,7 +48,7 @@ SRC_LD = BlueNRG1.ld
 OPENOCD ?= openocd -f board/st_nucleo_f0.cfg
 
 include ../cm-makefile/config.mk
-LDFLAGS = $(ARCHFLAGS) $(OPTFLAGS) $(DBGFLAGS) -lbluenrg1_stack -lcrypto -mthumb -specs=nosys.specs -nostartfiles -nodefaultlibs -static -L$(NRG_LIB_DIR)/Bluetooth_LE/library -L$(NRG_LIB_DIR)/cryptolib -Wl,--cref -Wl,-Map=$(BUILD_DIR)/$(BIN).map -Wl,--gc-sections -Wl,--defsym=malloc_getpagesize_P=0x80 -Wl,--defsym=ST_OTA_LOWER_APPLICATION=1 -Wl,--start-group -lc -lm -Wl,--end-group -specs=nano.specs
+LDFLAGS = $(ARCHFLAGS) $(OPTFLAGS) $(DBGFLAGS) -lbluenrg1_stack -lcrypto -mthumb -specs=nosys.specs -nostartfiles -nodefaultlibs -static -L$(NRG_LIB_DIR)/Bluetooth_LE/library -L$(NRG_LIB_DIR)/cryptolib -Wl,--cref -Wl,-Map=$(BUILD_DIR)/$(BIN).map -Wl,--gc-sections -Wl,--defsym=malloc_getpagesize_P=0x80 -Wl,--defsym=ST_USE_OTA_SERVICE_MANAGER_APPLICATION=1 -Wl,--start-group -lc -lm -Wl,--end-group -specs=nano.specs
 #arm-atollic-eabi-gcc -c -mthumb -g -Wa,--no-warn -x assembler-with-cpp -specs=nano.specs -o HAL/context_switch.o
 $(BUILD_DIR)/context_switch.o: $(NRG_LIB_DIR)/hal/src/context_switch.s
 	@echo "  AS      $(notdir $@)"
