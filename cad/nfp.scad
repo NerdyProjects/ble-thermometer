@@ -16,9 +16,15 @@ module form() {
     translate([-50,0,0]) rotate([0,90,0]) cylinder(d=7,h=2, $fn=10);
 }
 difference() {
-    translate([-55, -15, -10]) cube([80,30,10]);
+    translate([-55, -15, -24]) cube([80,30,24]);
     form();
-    cube([25,15,30], center=true);
+    //translate([-12.5, -7.5, -43]) cube([25,15,40]);
+    translate([-20, -12, -50]) cylinder(d=4,h=100, $fn=10);
+    translate([-20, 12, -50]) cylinder(d=4,h=100, $fn=10);
+    translate([18, 12, -50]) cylinder(d=4,h=100, $fn=10);
+    translate([18, -12, -50]) cylinder(d=4,h=100, $fn=10);
+    translate([-45, 12, -50]) cylinder(d=4,h=100, $fn=10);
+    translate([-45, -12, -50]) cylinder(d=4,h=100, $fn=10);
 }
 //translate([-35, 0, -10]) cylinder(d=2,h=20, $fn=10);
 //rotate([180, 0, 0]) difference() {
