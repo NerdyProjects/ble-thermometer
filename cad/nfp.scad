@@ -16,7 +16,7 @@ module form() {
     translate([-50,0,0]) rotate([0,90,0]) cylinder(d=7,h=2, $fn=10);
 }
 difference() {
-    translate([-55, -15, -24]) cube([80,30,24]);
+    translate([-53, -15, -24]) cube([75,30,24]);
     form();
     //translate([-12.5, -7.5, -43]) cube([25,15,40]);
     translate([-20, -12, -50]) cylinder(d=4,h=100, $fn=10);
@@ -26,7 +26,13 @@ difference() {
     translate([-45, 12, -50]) cylinder(d=4,h=100, $fn=10);
     translate([-45, -12, -50]) cylinder(d=4,h=100, $fn=10);
 }
-//translate([-35, 0, -10]) cylinder(d=2,h=20, $fn=10);
+
+translate([10, 15, -21]) cube([5, 5, 15]);
+translate([-18, 15, -21]) cube([5, 5, 15]);
+translate([10, -20, -21]) cube([5, 5, 15]);
+translate([-18, -20, -21]) cube([5, 5, 15]);
+translate([22, -20, -21]) cube([10, 40, 15]);
+translate([-63, -20, -21]) cube([10, 40, 15]);
 //rotate([180, 0, 0]) difference() {
 //    translate([-35, -15, 0]) cube([60,30,3]);
 //    form();
