@@ -18,7 +18,6 @@ INC= -I$(NRG_LIB_DIR)/hal/inc \
 
 SRC_C = main.c \
 BlueNRG1_it.c \
-$(NRG_LIB_DIR)/BLE_Application/OTA/src/OTA_btl.c \
 $(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/BlueNRG1_adc.c \
 $(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/BlueNRG1_adc.c \
 $(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/BlueNRG1_sysCtrl.c \

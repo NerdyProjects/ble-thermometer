@@ -22,6 +22,10 @@
 #define PRINTF(...)
 #endif
 
+/** Set the watchdog reload interval in [s] = (WDT_LOAD + 3) / (clock frequency in Hz). */
+#define RC32K_FREQ		32768
+#define RELOAD_TIME(sec)        ((sec*RC32K_FREQ)-3)
+
 #define SENSOR_TIMER 0
 #define SENSOR_READ_DURATION_MS 50
 static uint16_t sensor_update_rate = 5000;
@@ -67,14 +71,21 @@ void HAL_VTimerTimeoutCallback(uint8_t timerNum)
   }
 }
 
+void WDG_Reload(void)
+{
+  WDG_SetReload(RELOAD_TIME(180));
+}
+
 
 int main(void)
 {
   uint8_t ret;
 
   SystemInit();
-
   Clock_Init();
+  /* Reenable watchdog that should have been enabled by ServiceManager beforehand */
+  SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_WDG, ENABLE);
+  WDG_Reload();
 
   ret = BlueNRG_Stack_Initialization(&BlueNRG_Stack_Init_params);
   if (ret != BLE_STATUS_SUCCESS) {
@@ -96,6 +107,6 @@ int main(void)
 
     APP_Tick();
 
-    //BlueNRG_Sleep(SLEEPMODE_WAKETIMER, 0, 0);
+    BlueNRG_Sleep(SLEEPMODE_WAKETIMER, 0, 0);
   }
 }

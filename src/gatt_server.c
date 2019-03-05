@@ -46,7 +46,7 @@ uint8_t BLEDeviceInit(void)
 {
   uint8_t ret;
   uint16_t service_handle, dev_name_char_handle, appearance_char_handle;
-  uint8_t name[] = {'B','o','d','y','T','h','e','r','m','o','m','e','t','e','r'};
+  uint8_t name[] = {'T','h','e','r','m','o','m','e','t','e','r'};
   
   {
     uint8_t bdaddr[] = {0x12, 0x34, 0x00, 0xE1, 0x80, 0x02};
