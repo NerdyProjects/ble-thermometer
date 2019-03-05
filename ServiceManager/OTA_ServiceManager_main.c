@@ -87,22 +87,13 @@ static uint32_t OTA_Check_Application_Tags_Value(void)
 */
 void WDG_Configuration(void)
 {
-  NVIC_InitType NVIC_InitStructure;
-  
   /* Enable watchdog clock */
   SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_WDG, ENABLE);
   
   /* WDG reload time configuration */
-  WDG_SetReload(RELOAD_TIME(30));
+  WDG_SetReload(RELOAD_TIME(180));
   
-  /* Clear pending interrupt on cortex */
-  NVIC->ICPR[0] = 0xFFFFFFFF;
-  
-  /* Enable the RTC interrupt */
-  NVIC_InitStructure.NVIC_IRQChannel = WDG_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = LOW_PRIORITY;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
+  WDG_Enable();
 }
 
 static void exitBootloader()
@@ -111,8 +102,10 @@ static void exitBootloader()
   uint32_t JumpAddress;
   /* When application goes back to bootloader by reset, make it behave like a system reset */
   ota_sw_activation = OTA_INVALID_OLD_TAG;
+  
   /* enable watchdog before jumping to application to be able to recover from bad firmware */
   WDG_Configuration();
+
   /* Jump to user application */
   JumpAddress = *(__IO uint32_t*) (APP_WITH_OTA_SERVICE_ADDRESS + 4);
   Jump_To_Application = (pFunction) JumpAddress;
@@ -134,11 +127,9 @@ int main(void)
    */
   uint8_t resetToApplication = 0;
   uint8_t ret;
-    
+
   /* Check Service manager RAM Location to verify if a jump to Service Manager has been set from the Application */
   switch(ota_sw_activation) {
-    case OTA_APP_SWITCH_OP_CODE_GO_TO_OTA_SERVICE_MANAGER:
-      break;
     case OTA_APP_SWITCH_OP_CODE_GO_TO_NEW_APP:
     /* go to application immediately */
       if(OTA_Check_Application_Tags_Value() == APP_WITH_OTA_SERVICE_ADDRESS)
@@ -146,6 +137,8 @@ int main(void)
         exitBootloader();
       }
       break;
+    /* use DEFAULT case here to allow exit of service manager at some point */
+    case OTA_APP_SWITCH_OP_CODE_GO_TO_OTA_SERVICE_MANAGER:
     default:
     /* go to application after a timeout where service manager is active */
       if(OTA_Check_Application_Tags_Value() == APP_WITH_OTA_SERVICE_ADDRESS)
@@ -161,6 +154,8 @@ int main(void)
   SystemInit();
   
   Clock_Init();
+
+  WDG_Configuration();
   
   /* BlueNRG-1 stack init */
   ret = BlueNRG_Stack_Initialization(&BlueNRG_Stack_Init_params);

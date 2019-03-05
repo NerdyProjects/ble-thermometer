@@ -32,6 +32,9 @@
 #define PRINTF(...)
 #endif
 /* Private macro -------------------------------------------------------------*/
+/** Set the watchdog reload interval in [s] = (WDT_LOAD + 3) / (clock frequency in Hz). */
+#define RC32K_FREQ		32768
+#define RELOAD_TIME(sec)        ((sec*RC32K_FREQ)-3)
 /* Private variables ---------------------------------------------------------*/
 /* peek into OTA_btl.c NewImageCharHandle to be able to detect a starting flash operation */
 extern uint16_t btlNewImageCharHandle;
@@ -165,7 +168,7 @@ void hci_le_connection_complete_event(uint8_t Status,
                                       uint16_t Supervision_Timeout,
                                       uint8_t Master_Clock_Accuracy)
 { 
-  
+  WDG_SetReload(RELOAD_TIME(30));
 }/* end hci_le_connection_complete_event() */
 
 
@@ -200,6 +203,7 @@ void aci_gatt_attribute_modified_event(uint16_t Connection_Handle,
     HAL_VTimer_Stop(0);
   }
   OTA_Write_Request_CB(Connection_Handle, Attr_Handle, Attr_Data_Length, Attr_Data);      
+  WDG_SetReload(RELOAD_TIME(30));
 }
 
 /* aci_gatt_read_permit_req_event()
