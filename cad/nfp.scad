@@ -1,6 +1,8 @@
-length = 37;
-width = 21;
-height = 13;
+length = 40;
+width = 23;
+height = 20;
+wood_cutout_for_connection = 8;
+connection_width = 4;
 module form() {
     resize([length,width,height]) minkowski() {
         resize([length,width,height]) sphere(1, $fn=30);
@@ -18,6 +20,7 @@ module form() {
 difference() {
     translate([-53, -15, -24]) cube([75,30,24]);
     form();
+    // top cutout for filling/
     //translate([-12.5, -7.5, -43]) cube([25,15,40]);
     translate([-20, -12, -50]) cylinder(d=4,h=100, $fn=10);
     translate([-20, 12, -50]) cylinder(d=4,h=100, $fn=10);
@@ -27,12 +30,12 @@ difference() {
     translate([-45, -12, -50]) cylinder(d=4,h=100, $fn=10);
 }
 
-translate([10, 15, -21]) cube([5, 5, 15]);
-translate([-18, 15, -21]) cube([5, 5, 15]);
-translate([10, -20, -21]) cube([5, 5, 15]);
-translate([-18, -20, -21]) cube([5, 5, 15]);
-translate([22, -20, -21]) cube([10, 40, 15]);
-translate([-63, -20, -21]) cube([10, 40, 15]);
+translate([10, 15, -15 - wood_cutout_for_connection]) cube([connection_width, 5, 15]);
+translate([-18, 15, -15 - wood_cutout_for_connection]) cube([connection_width, 5, 15]);
+translate([10, -20, -15 - wood_cutout_for_connection]) cube([connection_width, 5, 15]);
+translate([-18, -20, -15 - wood_cutout_for_connection]) cube([connection_width, 5, 15]);
+translate([22, -20, -15 - wood_cutout_for_connection]) cube([10, 40, 15]);
+translate([-63, -20, -15 - wood_cutout_for_connection]) cube([10, 40, 15]);
 //rotate([180, 0, 0]) difference() {
 //    translate([-35, -15, 0]) cube([60,30,3]);
 //    form();
