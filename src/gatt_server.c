@@ -35,11 +35,10 @@ void setConnectable(void)
   /* Set Name as OTAServiceMgr */
   uint8_t  local_name[] = {AD_TYPE_COMPLETE_LOCAL_NAME,'B','o','d','y','T','h','e','r','m','o','m','e','t','e','r'};
   
-  /* Add OTA service UUID to scan response */
   hci_le_set_scan_response_data(0, NULL); 
   
-  aci_gap_set_discoverable(ADV_IND, 0, 0, RANDOM_ADDR, NO_WHITE_LIST_USE,
-                           16, local_name, 0, NULL, 0, 0);    
+  aci_gap_set_discoverable(ADV_IND, 0x0800, 0x0800, RANDOM_ADDR, NO_WHITE_LIST_USE,
+                           16, local_name, 0, NULL, 80, 512);    
 }
 
 uint8_t BLEDeviceInit(void)
