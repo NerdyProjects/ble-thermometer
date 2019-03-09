@@ -46,7 +46,7 @@ typedef  void (*pFunction)(void);
 /** Set the watchdog reload interval in [s] = (WDT_LOAD + 3) / (clock frequency in Hz). */
 #define RC32K_FREQ		32768
 #define RELOAD_TIME(sec)        ((sec*RC32K_FREQ)-3)
-#define APPLICATION_WAIT_MS     60000
+#define APPLICATION_WAIT_MS     20000
 /* Private variables ---------------------------------------------------------*/  
 extern volatile uint32_t ota_sw_activation;
 
@@ -91,7 +91,7 @@ void WDG_Configuration(void)
   SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_WDG, ENABLE);
   
   /* WDG reload time configuration */
-  WDG_SetReload(RELOAD_TIME(180));
+  WDG_SetReload(RELOAD_TIME(30));
   
   WDG_Enable();
 }
