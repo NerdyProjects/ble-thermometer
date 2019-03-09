@@ -31,6 +31,46 @@
 static uint16_t sensor_update_rate = 5000;
 static volatile uint8_t sensorTimer_expired = FALSE;
 
+static void uart_putc(uint8_t tx_data)
+{
+  while (UART_GetFlagStatus(UART_FLAG_TXFF) == SET);
+  UART_SendData(tx_data);
+}
+
+void debug(char *msg)
+{
+  while(*msg) {
+    uart_putc(*(msg++));
+  }
+}
+
+void uart_init(void)
+{
+  UART_InitType UART_InitStructure;
+  
+  SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_UART | CLOCK_PERIPH_GPIO, ENABLE);
+  
+  GPIO_InitType GPIO_InitStructure;
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+  GPIO_InitStructure.GPIO_Mode = Serial1_Mode;
+  GPIO_InitStructure.GPIO_Pull = DISABLE;
+  GPIO_InitStructure.GPIO_HighPwr = DISABLE;
+  GPIO_Init(&GPIO_InitStructure);
+
+  UART_InitStructure.UART_BaudRate = 115200;
+  UART_InitStructure.UART_WordLengthTransmit = UART_WordLength_8b;
+  UART_InitStructure.UART_WordLengthReceive = UART_WordLength_8b;
+  UART_InitStructure.UART_StopBits = UART_StopBits_1;
+  UART_InitStructure.UART_Parity = UART_Parity_No;
+  UART_InitStructure.UART_HardwareFlowControl = UART_HardwareFlowControl_None;
+  UART_InitStructure.UART_Mode = UART_Mode_Tx;
+  UART_InitStructure.UART_FifoEnable = ENABLE;
+  UART_Init(&UART_InitStructure);
+
+  UART_Cmd(ENABLE);
+}
+
 static void APP_Init(void)
 {
   sensor_init();
@@ -83,10 +123,12 @@ int main(void)
 
   SystemInit();
   Clock_Init();
+  uart_init();
   /* Reenable watchdog that should have been enabled by ServiceManager beforehand */
   SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_WDG, ENABLE);
   WDG_Reload();
 
+  debug("Init bluenrg stack...\n");
   ret = BlueNRG_Stack_Initialization(&BlueNRG_Stack_Init_params);
   if (ret != BLE_STATUS_SUCCESS) {
     /* TODO: Reboot */
@@ -99,6 +141,7 @@ int main(void)
     while(1);
   }
 
+  debug("Init app...\n");
   APP_Init();
 
   while(1) {

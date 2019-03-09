@@ -61,6 +61,9 @@
   #define assert_param(expr) ((void)0)
 #endif /* USE_FULL_ASSERT */
 
+
+void debug(char *msg);
+
 #endif /* BlueNRG1_CONF_H */
 
 /******************* (C) COPYRIGHT 2014 STMicroelectronics *****END OF FILE****/

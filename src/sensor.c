@@ -196,8 +196,10 @@ int8_t BMP_I2C_Read(uint8_t dev_id, uint8_t reg_addr, uint8_t *data, uint16_t le
   ErrorStatus res = SdkEvalI2CRead(data, dev_id, reg_addr, len);
   if(res != SUCCESS)
   {
-    while(1)
-      ;
+    //while(1)
+     // ;
+     debug("Error reading I2C\n");
+
   }
   return res;
 }
@@ -206,8 +208,7 @@ int8_t BMP_I2C_Write(uint8_t dev_id, uint8_t reg_addr, uint8_t *data, uint16_t l
   ErrorStatus res = SdkEvalI2CWrite(data, dev_id, reg_addr, len);
   if(res != SUCCESS)
   {
-    while(1)
-      ;
+    debug("Error writing I2C\n");
   }
   return res;
 }
@@ -225,8 +226,13 @@ void sensor_init(void) {
 
   res = bmp280_init(&bmp);
   if(res != BMP280_OK) {
-    while(1)
-      ;
+    bmp.dev_id = BMP280_I2C_ADDR_PRIM;
+    res = bmp280_init(&bmp);
+    if(res != BMP280_OK) {
+      debug("could not find BMP on any I2C address\n");
+      while(1)
+        ;
+    }
   }
 
   res = bmp280_get_config(&conf, &bmp);
