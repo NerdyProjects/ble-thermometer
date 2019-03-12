@@ -33,6 +33,7 @@
 #include "BlueNRG1_dma.h"
 #include "BlueNRG1_spi.h"
 #include "BlueNRG1_uart.h"
+#include "BlueNRG1_adc.h"
 /*#include "BlueNRG1_mft.h"*/
 /*#include "BlueNRG1_rtc.h"*/
 #include "BlueNRG1_sysCtrl.h"
@@ -63,6 +64,7 @@
 
 
 void debug(char *msg);
+void debug_int(uint32_t num);
 
 #endif /* BlueNRG1_CONF_H */
 

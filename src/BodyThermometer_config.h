@@ -15,7 +15,7 @@
 /* Default number of GAP and GATT services */
 #define DEFAULT_NUM_GATT_SERVICES   2
 /* Default number of GAP and GATT attributes */
-#define DEFAULT_NUM_GATT_ATTRIBUTES 9
+#define DEFAULT_NUM_GATT_ATTRIBUTES 13
 
 /* Enable/disable Data length extension Max supported ATT_MTU size based on OTA client & server Max ATT_MTU sizes capabilities */
 #if (CONTROLLER_DATA_LENGTH_EXTENSION_ENABLED == 1) && (OTA_EXTENDED_PACKET_LEN == 1) 
@@ -42,10 +42,10 @@
 #else /* NO OTA Service is required */
 
 /* Number of services requests from the sensor demo */
-#define NUM_APP_GATT_SERVICES 1
+#define NUM_APP_GATT_SERVICES 2
 
 /* Number of attributes requests from the sensor demo */
-#define NUM_APP_GATT_ATTRIBUTES 7
+#define NUM_APP_GATT_ATTRIBUTES 20
 
 /* OTA characteristics maximum lenght */
 #define OTA_MAX_ATT_SIZE (0) 
@@ -65,12 +65,6 @@
  */
 #define NUM_LINKS               (MIN_NUM_LINK)
 
-/* Maximum number of attribute records that can be added to the first application service: acceleration service */
-#define MAX_NUMBER_ATTRIBUTES_RECORDS_SERVICE_1 (7) 
-
-/* Maximum number of attribute records that can be added to the second application service: environmental service */
-#define MAX_NUMBER_ATTRIBUTES_RECORDS_SERVICE_2 (10)
-
 /* Number of GATT attributes needed for the sensor demo. */
 #define NUM_GATT_ATTRIBUTES     (DEFAULT_NUM_GATT_ATTRIBUTES + NUM_APP_GATT_ATTRIBUTES)
 
@@ -88,7 +82,7 @@
 
 /* Array size for the attribute value */
 #ifndef SENSOR_EMULATION
-#define ATT_VALUE_ARRAY_SIZE    (43 + 106  + OTA_ATT_VALUE_ARRAY_SIZE) //(GATT + GAP) = 43 (Device Name: BlueNRG) + Acceleration (Acceleration (27) + Free Fall (21) characteristics) +  Environmental Sensor (Temperature (28), Pressure (29)  characteristics)  Services
+#define ATT_VALUE_ARRAY_SIZE    (43 + 140  + OTA_ATT_VALUE_ARRAY_SIZE) //(GATT + GAP) = 43 (Device Name: BlueNRG) + Acceleration (Acceleration (27) + Free Fall (21) characteristics) +  Environmental Sensor (Temperature (28), Pressure (29)  characteristics)  Services
 #else
 #define ATT_VALUE_ARRAY_SIZE    (43 + 106 + 28 + OTA_ATT_VALUE_ARRAY_SIZE) //(GATT + GAP) = 43 (Device Name: BlueNRG) + Acceleration (Acceleration (27) + Free Fall (21) characteristics) +  Environmental Sensor (Temperature (28) , Pressure (29), Humidity (28) characteristics)  Services
 #endif 

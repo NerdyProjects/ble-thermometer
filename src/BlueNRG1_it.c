@@ -27,6 +27,7 @@
 #include "ble_const.h" 
 #include "bluenrg1_stack.h"
 #include "clock.h"
+#include "gatt_server.h"
 
 
 /** @addtogroup BlueNRG1_StdPeriph_Examples
@@ -40,6 +41,8 @@
 /** @addtogroup GPIO_IOToggle
   * @{
   */ 
+
+extern void button_handle(void);
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -95,7 +98,10 @@ void SysTick_Handler(void)
 
 void GPIO_Handler(void)
 {
-
+  if(GPIO_GetITPendingBit(GPIO_Pin_11) == SET) {
+    GPIO_ClearITPendingBit(GPIO_Pin_11);
+    button_handle();
+  }
 }
 /******************************************************************************/
 /*                 BlueNRG-1 Peripherals Interrupt Handlers                   */

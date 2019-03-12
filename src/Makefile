@@ -1,13 +1,15 @@
 BIN = bodythermometer
 NRG_LIB_DIR = ../Library/BlueNRG-3.1.0/Library
-DEF := -DST_USE_OTA_SERVICE_MANAGER_APPLICATION -DLS_SOURCE=LS_SOURCE_EXTERNAL_32KHZ -DSMPS_INDUCTOR=SMPS_INDUCTOR_10uH -DBLUENRG1_DEVICE -DHS_SPEED_XTAL=HS_SPEED_XTAL_32MHZ
+DEF := -DST_USE_OTA_SERVICE_MANAGER_APPLICATION -DLS_SOURCE=LS_SOURCE_EXTERNAL_32KHZ -DSMPS_INDUCTOR=SMPS_INDUCTOR_10uH -DBLUENRG1_DEVICE -DHS_SPEED_XTAL=HS_SPEED_XTAL_32MHZ -DFORCE_CORE_TO_16MHZ
 
 OPENOCD = openocd -f interface/stlink.cfg -f target/bluenrg-x.cfg
 
 # Library throws a lot of warnings - silence them a bit
 WARNFLAGS = -Wall -Wextra -Wimplicit-function-declaration
 
-INC= -I$(NRG_LIB_DIR)/hal/inc \
+INC= \
+-I. \
+-I$(NRG_LIB_DIR)/hal/inc \
 -I$(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/inc \
 -I$(NRG_LIB_DIR)/CMSIS/Device/ST/BlueNRG1/Include \
 -I$(NRG_LIB_DIR)/CMSIS/Include \
@@ -18,7 +20,6 @@ INC= -I$(NRG_LIB_DIR)/hal/inc \
 
 SRC_C = main.c \
 BlueNRG1_it.c \
-$(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/BlueNRG1_adc.c \
 $(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/BlueNRG1_adc.c \
 $(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/BlueNRG1_sysCtrl.c \
 $(NRG_LIB_DIR)/BlueNRG1_Periph_Driver/src/misc.c \
