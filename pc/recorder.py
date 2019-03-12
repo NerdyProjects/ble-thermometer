@@ -23,6 +23,7 @@ class Recorder():
     control_char = None
     data_char = None
     readout_in_progress = False
+    remaining_packets = 0
 
     def __init__(self, peripheral):
         self.peripheral = peripheral
@@ -53,6 +54,7 @@ class Recorder():
 
     def read(self, size):
         self.register_indication(self.data_char.getHandle(), True)
+        self.remaining_packets = size
         self.write_readout_command(size)
         print("Starting readout")
         self.readout_in_progress = True
@@ -64,7 +66,9 @@ class Recorder():
         if handle == self.data_char.getHandle():
             unpacked = unpack("<10h", data)
             print("Received data: %d %d %d %d %d %d %d %d %d %d" % (unpacked))
-            #print("Received notification for expected tu, seq: %d, status: %s" % (next_sequence, status))
+            self.remaining_packets = self.remaining_packets - 10
+            if self.remaining_packets <= 0:
+                self.readout_in_progress = False
             sys.stdout.flush()
         else:
             print("\nReceived notification for %d with %s" % (handle, data.hex()))
