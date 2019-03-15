@@ -1,14 +1,16 @@
-length = 40;
-width = 23;
-height = 20;
-wood_cutout_for_connection = 8;
-connection_width = 4;
+length = 38;
+width = 22;
+height = 18;
+//wood_cutout_for_connection = 8;
+//connection_width = 4;
 drill_width = 3;
 module form() {
     resize([length,width,height]) minkowski() {
         resize([length,width,height]) sphere(1, $fn=30);
         sphere(3, $fn=15);
     }
+    translate([-28,0,0]) rotate([0,90,0]) cylinder(r1=3.5,r2=8.3,h=20, $fn=50);
+    
     translate([-50,0,0]) rotate([0,90,0]) cylinder(d=6,h=40, $fn=10);
     translate([-30,0,0]) rotate([0,90,0]) cylinder(d=7,h=2, $fn=10);
     translate([-25,0,0]) rotate([0,90,0]) cylinder(d=7,h=2, $fn=10);
@@ -19,7 +21,7 @@ module form() {
     translate([-50,0,0]) rotate([0,90,0]) cylinder(d=7,h=2, $fn=10);
 }
 
-difference() {
+/*difference() {
     translate([-50, -15]) square([72,30]);
     translate([-45, -10]) circle(d=drill_width, $fn=50);
     translate([-45, 10]) circle(d=drill_width, $fn=50);
@@ -28,10 +30,16 @@ difference() {
     translate([18, -11]) circle(d=drill_width, $fn=50);
     translate([18, 11]) circle(d=drill_width, $fn=50);
 }
-/*
+*/
+
+translate([-11, 0, -9.5]) resize([7, 20, 5]) minkowski() {
+    resize([10, 20, 5]) sphere(1, $fn=50);
+}
+
 difference() {
     translate([-50, -15, -24]) cube([72,30,24]);
     form();
+    // finger placement for button
     // top cutout for filling/
     //translate([-12.5, -7.5, -43]) cube([25,15,40]);
     //translate([-20, -12, -50]) cylinder(d=4,h=100, $fn=10);
@@ -41,7 +49,7 @@ difference() {
     //translate([-45, 12, -50]) cylinder(d=4,h=100, $fn=10);
     //translate([-45, -12, -50]) cylinder(d=4,h=100, $fn=10);
 }
-*/
+
 //translate([10, 15, -15 - wood_cutout_for_connection]) cube([connection_width, 5, 15]);
 //translate([-18, 15, -15 - wood_cutout_for_connection]) cube([connection_width, 5, 15]);
 //translate([10, -20, -15 - wood_cutout_for_connection]) cube([connection_width, 5, 15]);
