@@ -6,21 +6,37 @@ extern volatile int app_flags;
  * @name Flags for application
  * @{
  */
-#define CONNECTED                0x01
-#define SET_DIRECTED_CONNECTABLE 0x02
-#define SET_PUBLIC_CONNECTABLE   0x04
-#define CONNECTABLE              0x08
-#define PAIRABLE                 0x10
-#define READ_RECORDER_BUFFER     0x20
-#define TX_BUFFER_FULL           0x40
-#define CONFIRMATION_RECEIVED    0x80
+#define CONNECTED                0x000001
+#define SET_DIRECTED_CONNECTABLE 0x000002
+#define SET_PUBLIC_CONNECTABLE   0x000004
+#define CONNECTABLE              0x000008
+#define PAIRABLE                 0x000010
+#define READ_RECORDER_BUFFER     0x000020
+#define TX_BUFFER_FULL           0x000040
+#define CONFIRMATION_RECEIVED    0x000080
 
-/* Added flags for handling security steps */
-#define START_GAP_SLAVE_SECURITY_REQUEST    0x100
-#define HCI_ENCRYPTION_CHANGE_EVENT_FLAG    0x200 
-#define ACI_GAP_PAIRING_COMPLETE_EVENT_FLAG 0x800
+#define START_GAP_SLAVE_SECURITY_REQUEST    0x000100
+#define HCI_ENCRYPTION_CHANGE_EVENT_FLAG    0x000200 
+#define ACI_GAP_PAIRING_COMPLETE_EVENT_FLAG 0x000800
+#define TRIGGER_DATA_TRANSFER               0x000400
 
-#define TRIGGER_DATA_TRANSFER               0x400
+#define ADC_LOAD_CONVERSION_IN_PROGRESS 0x001000
+#define ADC_IDLE_CONVERSION_IN_PROGRESS 0x002000
+#define ADC_LOAD_CONVERSION_REQUEST     0x004000
+#define ADC_IDLE_CONVERSION_REQUEST     0x008000
+
+#define SENSOR_UNAVAILABLE              0x010000
+#define SENSOR_TIMER_ELAPSED            0x020000
+#define SENSOR_MEASUREMENT_TRIGGERED    0x040000
+#define MEASUREMENT_ENABLED                     0x080000
+
+#define REQUEST_LOW_POWER_CONNECTION_PARAMETERS  0x0100000
+#define REQUEST_DISABLE_BLE                              0x0200000
+#define REQUEST_DISABLE_MEASUREMENT              0x0400000
+#define REQUEST_ENABLE_MEASUREMENT               0x0800000
+
+#define REQUEST_RING_CLEAR                      0x1000000
+
 
 
 /**

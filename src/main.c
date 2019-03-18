@@ -11,61 +11,161 @@
 #include "gatt_server.h"
 #include "sensor.h"
 #include "app_flags.h"
+#include "led.h"
+#include "timer.h"
+#include "adc.h"
+#include "app.h"
 
 #ifndef DEBUG
 #define DEBUG 0
 #endif
 
 #if DEBUG
+#define ASSERT_FALSE() while(1) { BlueNRG_Sleep(SLEEPMODE_CPU_HALT, 0, 0); }
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #else
+#define ASSERT_FALSE() NVIC_SystemReset()
 #define PRINTF(...)
 #endif
 
-#define ASSERT_FALSE() while(1) { BlueNRG_Sleep(SLEEPMODE_CPU_HALT, 0, 0); }
+
 
 /** Set the watchdog reload interval in [s] = (WDT_LOAD + 3) / (clock frequency in Hz). */
 #define RC32K_FREQ		32768
 #define RELOAD_TIME(sec)        ((sec*RC32K_FREQ)-3)
 
-#define SENSOR_TIMER 0
-#define SENSOR_READ_DURATION_MS 50
-static uint16_t sensor_update_rate = 5000;
-static volatile uint8_t sensorTimer_expired = FALSE;
+#define LED_FLASH_ON_MS 50
+#define LED_FLASH_OFF_MS 900
+#define LED_FAST_FLASH_ON_MS 20
+#define LED_FAST_FLASH_OFF_MS 300
+#define LED_BLINK_ON_MS 180
+#define LED_BLINK_OFF_MS 300
+
+#define SENSOR_READ_DURATION_MS 30
+static volatile uint32_t sensor_update_rate = 15000;
+static uint32_t next_sensor_interval;
+
+static volatile LedMode ledMode;
+static volatile uint8_t ledState;
+static volatile uint8_t ledCount;
 
 volatile int app_flags;
 
+void led_init(void) {
+  GPIO_InitType gpio;
+  /* Enable the GPIO Clock */
+  SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_GPIO, ENABLE);
+    
+  /* Configure LED as output */ 
+  gpio.GPIO_Pin = GPIO_Pin_0;
+  gpio.GPIO_Mode = GPIO_Output;
+  gpio.GPIO_Pull = DISABLE;
+  gpio.GPIO_HighPwr = DISABLE;
+  GPIO_Init(&gpio);
+}
+
+static void led_set_ll(uint8_t state) {
+  if(state) {
+    GPIO_SetBits(GPIO_Pin_0);
+    ledState = 1;
+  } else {
+    GPIO_ResetBits(GPIO_Pin_0);
+    ledState = 0;
+  }
+}
+
+static void led_handle(void) {
+  uint32_t nextTime;
+  if(ledState == 0) {
+    switch(ledMode) {
+      case LED_BLINK:
+      nextTime = LED_BLINK_ON_MS;
+      break;
+      case LED_FLASH:
+      nextTime = LED_FLASH_ON_MS;
+      break;
+      case LED_FAST_FLASH:
+      nextTime = LED_FAST_FLASH_ON_MS;
+      break;
+      case LED_OFF:
+      default:
+      return;
+    }
+    led_set_ll(1);
+    HAL_VTimerStart_ms(LED_TIMER, nextTime);
+    if(ledCount) {
+      if(--ledCount == 0) {
+        ledMode = LED_OFF;
+      }
+    }
+  } else {
+     switch(ledMode) {
+      case LED_BLINK:
+      nextTime = LED_BLINK_OFF_MS;
+      break;
+      case LED_FLASH:
+      nextTime = LED_FLASH_OFF_MS;
+      break;
+      case LED_FAST_FLASH:
+      nextTime = LED_FAST_FLASH_OFF_MS;
+      break;
+      case LED_OFF:
+      default:
+      led_set_ll(0);
+      return;
+    }
+    led_set_ll(0);
+    HAL_VTimerStart_ms(LED_TIMER, nextTime);
+  }  
+}
+
+/* set LED mode. If count is non-zero, only play pattern count times. */
+void led_set(LedMode mode, uint8_t count) {
+  HAL_VTimer_Stop(LED_TIMER);
+  ledMode = mode;
+  ledCount = count;
+  led_set_ll(0);
+  led_handle();
+}
+
+#if DEBUG
 static void uart_putc(uint8_t tx_data)
 {
   while (UART_GetFlagStatus(UART_FLAG_TXFF) == SET);
   UART_SendData(tx_data);
 }
+#endif
 
-void debug(char *msg)
+void _debug(char *msg)
 {
+  #if DEBUG
   while(*msg) {
     uart_putc(*(msg++));
   }
+  #endif
 }
 
-void debug_int(uint32_t num)
+void _debug_int(uint32_t num)
 {
+  #if DEBUG
   char buf[8];
   buf[7] = 0;
   for(int i = 0; i < 7; ++i) {
     int j = (num >> 4*i) & 0x0F;
     if(j < 10) {
       buf[6-i] = '0' + j;
-    } else {
+    } else { 
       buf[6-i] = 'A' + j - 10;
     }
   }
   debug(buf);
+  #endif
 }
 
 void uart_init(void)
 {
+  #if DEBUG
   UART_InitType UART_InitStructure;
   
   SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_UART | CLOCK_PERIPH_GPIO, ENABLE);
@@ -89,48 +189,7 @@ void uart_init(void)
   UART_Init(&UART_InitStructure);
 
   UART_Cmd(ENABLE);
-}
-
-static void adc_init(void)
-{
-  ADC_InitType adc;
-  SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_ADC, ENABLE);
-  
-  /* Configure ADC */
-  adc.ADC_OSR = ADC_OSR_200;
-  adc.ADC_Input = ADC_Input_BattSensor;
-  adc.ADC_ConversionMode = ADC_ConversionMode_Single;
-  adc.ADC_ReferenceVoltage = ADC_ReferenceVoltage_0V6;
-  adc.ADC_Attenuation = ADC_Attenuation_0dB;
-  
-  ADC_Init(&adc);
-  ADC_Filter(ENABLE);
-  ADC_AutoOffsetUpdate(ENABLE);
-  ADC_Calibration(ENABLE);
-}
-
-/* returns the battery voltage in millivolts */
-static int16_t adc_read_battery(void)
-{
-  int16_t rawResult;
-  
-  // Did not work without reinitialising everytime, as I am a bit lazy right now, let's do it like this
-  adc_init();
-  ADC_Cmd(ENABLE);
-  while(!ADC_GetFlagStatus(ADC_FLAG_EOC))
-    ;
-  rawResult = ADC_GetRawData();
-  
-  assert_param(ADC->CONF_b.SKIP == 0);
-  ADC_Cmd(DISABLE);
-  SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_ADC, DISABLE);
-  
-  /* The result calculation is fixed for OSR 200, no SKIP, 0.6V bias and 2.4V reference.
-     The effective full scale used in the calculation differs between datasheet and library code!
-     Still, the implemented solution just dividing rawResult by two gives less than 10 mV error from 1.9-3.4 V
-  */
-  /*  base formula (lib): 4.36 * (0.6 - ((raw / 19450) * 2.4)) */
-  return 2616 - rawResult / 2;
+  #endif
 }
 
 static void button_init(void)
@@ -182,61 +241,164 @@ void button_handle(void) {
       lastPressTime = time;
     } else {
       int32_t pressDuration = HAL_VTimerDiff_ms_sysT32(time, lastPressTime);
-      if(pressDuration > 6000) {
-        debug("RST\n");
+      if(pressDuration > 25000) {
         NVIC_SystemReset();
-      } else if(pressDuration > 3000) {
+      } else if(pressDuration > 6000) {
         /* activate bluetooth pairing */
         debug("PAIR\n");
         APP_FLAG_SET(SET_PUBLIC_CONNECTABLE);
-      } else if(pressDuration > 500) {
-        /* activate bluetooth connection */
-        debug("CONN\n");
-        APP_FLAG_SET(SET_DIRECTED_CONNECTABLE);
+      } else if(pressDuration > 1500) {
+        if(APP_FLAG(MEASUREMENT_ENABLED)) {
+          APP_FLAG_SET(REQUEST_DISABLE_MEASUREMENT);
+        } else {
+          APP_FLAG_SET(REQUEST_ENABLE_MEASUREMENT);
+        }
+      } else if(pressDuration > 300) {
+        /* (de)activate bluetooth connection */
+        if(APP_FLAG(CONNECTABLE) || APP_FLAG(CONNECTED)) {
+          APP_FLAG_SET(REQUEST_DISABLE_BLE);
+        } else {
+          debug("CONN\n");
+          APP_FLAG_SET(SET_DIRECTED_CONNECTABLE);
+        }
       }
     }
     lastState = state;
   }
 }
 
-static void APP_Init(void)
+
+void enable_measurement(void)
 {
   sensor_init();
-  Add_Services();
-  HAL_VTimerStart_ms(SENSOR_TIMER, sensor_update_rate);
+  if(!APP_FLAG(SENSOR_UNAVAILABLE)) {
+    next_sensor_interval = HAL_VTimerGetCurrentTime_sysT32();
+    recorder_enable_measurement();
+    recorder_set_measurement_interval(sensor_update_rate / 1000);
+    /* initially measure sensor now */
+    APP_FLAG_SET(MEASUREMENT_ENABLED);
+    HAL_VTimerStart_ms(SENSOR_TIMER, 100);
+  }
 }
 
-void APP_Tick(void)
+static void APP_Init(void)
 {
-  static uint8_t sensor_read_request_active = 0;
-  int res;
+  led_init();
+  recorder_ring_clear();
+  Add_Services();
+  enable_measurement();
+}
 
-  if(sensorTimer_expired) {
-    sensorTimer_expired = FALSE;
-    if(sensor_read_request_active) {
-      sensor_read_request_active = FALSE;
-      res = HAL_VTimerStart_ms(SENSOR_TIMER, sensor_update_rate);
-      if (res != BLE_STATUS_SUCCESS) {
-        ASSERT_FALSE();
-      }
+
+void disable_measurement(void)
+{
+  APP_FLAG_CLEAR(MEASUREMENT_ENABLED);
+  HAL_VTimer_Stop(SENSOR_TIMER);
+  APP_FLAG_CLEAR(SENSOR_MEASUREMENT_TRIGGERED);
+  sensor_deinit();
+  recorder_disable_measurement();
+}
+
+void set_measurement_interval(uint16_t seconds)
+{
+  recorder_set_measurement_interval(seconds);
+  sensor_update_rate = seconds * 1000;
+}
+
+static void trigger_sensor_measurement(void) {
+  if(sensor_measure() != SENSOR_SUCCESS) {
+    APP_FLAG_SET(SENSOR_UNAVAILABLE);
+    debug("trigger sensor fail\n");
+  } else {
+    APP_FLAG_SET(SENSOR_MEASUREMENT_TRIGGERED);
+    /* Use sensor timer for conversion timing. Do not alter sensor interval timing to be able to achieve constant period. */
+    HAL_VTimerStart_ms(SENSOR_TIMER, SENSOR_READ_DURATION_MS);
+  }
+}
+
+static void APP_Tick(void)
+{
+  if(APP_FLAG(REQUEST_DISABLE_MEASUREMENT)) {
+    APP_FLAG_CLEAR(REQUEST_DISABLE_MEASUREMENT);
+    disable_measurement();
+    APP_FLAG_CLEAR(REQUEST_DISABLE_MEASUREMENT);
+    led_set(LED_BLINK, 1);
+  }
+  if(APP_FLAG(REQUEST_ENABLE_MEASUREMENT)) {
+    APP_FLAG_CLEAR(REQUEST_ENABLE_MEASUREMENT);
+    enable_measurement();
+    led_set(LED_FAST_FLASH, 5);
+  }
+  if(APP_FLAG(SENSOR_TIMER_ELAPSED)) {
+    APP_FLAG_CLEAR(SENSOR_TIMER_ELAPSED);
+    if(APP_FLAG(SENSOR_MEASUREMENT_TRIGGERED)) {
+      APP_FLAG_CLEAR(SENSOR_MEASUREMENT_TRIGGERED);
+      debug("S READ\n");
       int16_t temperature = sensor_read_temperature();
-      Temp_Update(temperature);
-      Battery_Update(adc_read_battery());
-    } else {
-      sensor_measure();
-      sensor_read_request_active = TRUE;
-      res = HAL_VTimerStart_ms(SENSOR_TIMER, SENSOR_READ_DURATION_MS);
-      if (res != BLE_STATUS_SUCCESS) {
-        ASSERT_FALSE();
+      SensorError res = sensor_get_error(0);
+      if(res != SENSOR_SUCCESS) {
+        debug("S ERR\n");
+        /* This temperature result is invalid. Sensor code already reset hardware, but there is no result available at this point */
+        if(res == SENSOR_ERROR_PERSISTENT) {
+          debug("SENSOR UNVAILABLE\n");
+          APP_FLAG_SET(SENSOR_UNAVAILABLE);
+        }
+        if(res == SENSOR_ERROR_TEMPORARY) {
+          debug("retrigger sensor after error\n");
+          trigger_sensor_measurement();
+        }
+      } else {
+        Temp_Update(temperature);
+        /* step absolute sensor interval for constant period */
+        next_sensor_interval = HAL_VTimerAcc_sysT32_ms(next_sensor_interval, sensor_update_rate);
+        debug("sens int\n");
+        HAL_VTimerStart_sysT32(SENSOR_TIMER, next_sensor_interval);
       }
+    } else {    
+      trigger_sensor_measurement();
     }
+  }
+  if(APP_FLAG(SENSOR_UNAVAILABLE)) {
+    APP_FLAG_CLEAR(MEASUREMENT_ENABLED);
   }
 }
 
 void HAL_VTimerTimeoutCallback(uint8_t timerNum)
 {
   if (timerNum == SENSOR_TIMER) {
-    sensorTimer_expired = TRUE;
+    debug("S");
+    if(APP_FLAG(MEASUREMENT_ENABLED) && !APP_FLAG(SENSOR_UNAVAILABLE)) {
+      debug("E");
+      APP_FLAG_SET(SENSOR_TIMER_ELAPSED);
+    }
+    debug("\n");
+  }
+  if(timerNum == LED_TIMER) {
+    debug("L\n");
+    led_handle();
+  }
+  if(timerNum == ADC_TIMER) {
+    debug("A\n");
+    if(APP_FLAG(ADC_LOAD_CONVERSION_IN_PROGRESS)) {
+      if(adc_result_ready()) {
+        Battery_Load_Update(adc_read_battery());
+      } else {
+        Battery_Load_Update(0);
+      }
+      APP_FLAG_CLEAR(ADC_LOAD_CONVERSION_IN_PROGRESS);
+    } else if(APP_FLAG(ADC_IDLE_CONVERSION_IN_PROGRESS)) {
+      if(adc_result_ready()) {
+        Battery_Idle_Update(adc_read_battery());
+      } else {
+        Battery_Idle_Update(0);
+      }
+      APP_FLAG_CLEAR(ADC_IDLE_CONVERSION_IN_PROGRESS);
+    } else if(APP_FLAG(ADC_IDLE_CONVERSION_REQUEST)) {
+      APP_FLAG_CLEAR(ADC_IDLE_CONVERSION_REQUEST);
+      adc_trigger_read_battery();
+      APP_FLAG_SET(ADC_IDLE_CONVERSION_IN_PROGRESS);
+      HAL_VTimerStart_ms(ADC_TIMER, BATTERY_MEASUREMENT_TIME);
+    }
   }
 }
 
@@ -260,7 +422,7 @@ int main(void)
   SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_WDG, ENABLE);
   WDG_Reload();
 
-  debug("Init bluenrg stack...\n");
+  debug("Init bluenrg...\n");
   ret = BlueNRG_Stack_Initialization(&BlueNRG_Stack_Init_params);
   if (ret != BLE_STATUS_SUCCESS) {
     ASSERT_FALSE();
@@ -283,14 +445,33 @@ int main(void)
     BlueNRG_Sleep(SLEEPMODE_WAKETIMER, WAKEUP_IO11, WAKEUP_IOx_LOW << WAKEUP_IO11_SHIFT_MASK);
     if(BlueNRG_WakeupSource() == WAKEUP_IO11) {
       button_handle();
+      if(APP_FLAG(ADC_IDLE_CONVERSION_REQUEST) && !APP_FLAG(ADC_LOAD_CONVERSION_IN_PROGRESS) && !APP_FLAG(CONNECTABLE) && !APP_FLAG(CONNECTED)) {
+        /* No radio activity, button pressed so likely there was none lately, assume mostly idle and do battery level conversion */
+        APP_FLAG_CLEAR(ADC_IDLE_CONVERSION_REQUEST);
+        APP_FLAG_SET(ADC_IDLE_CONVERSION_IN_PROGRESS);
+        adc_trigger_read_battery();        
+        HAL_VTimerStart_ms(ADC_TIMER, BATTERY_MEASUREMENT_TIME);
+      }
     }
   }
 }
 
 SleepModes App_SleepMode_Check(SleepModes sleepMode) {
+  if(APP_FLAG(SENSOR_TIMER_ELAPSED)) {
+    /* we might have no timer active but would activate it next cycle */
+    return SLEEPMODE_RUNNING;
+  }
+  #if DEBUG
   if(UART_GetFlagStatus(UART_FLAG_BUSY)) {
     return SLEEPMODE_CPU_HALT;
   }
-
+  #endif
+  if(ledState || APP_FLAG(ADC_IDLE_CONVERSION_IN_PROGRESS) || APP_FLAG(ADC_LOAD_CONVERSION_IN_PROGRESS)) {
+    return SLEEPMODE_CPU_HALT;
+  }
+  if(APP_FLAG(MEASUREMENT_ENABLED) || ledMode) {
+    return SLEEPMODE_WAKETIMER;
+  }
+  
   return SLEEPMODE_NOTIMER;
 }

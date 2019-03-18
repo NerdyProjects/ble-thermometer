@@ -62,9 +62,19 @@
   #define assert_param(expr) ((void)0)
 #endif /* USE_FULL_ASSERT */
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
 
-void debug(char *msg);
-void debug_int(uint32_t num);
+#if DEBUG
+void _debug(char *msg);
+void _debug_int(uint32_t num);
+#define debug(x) _debug(x)
+#define debug_int(x) _debug_int(x)
+#else
+#define debug(x)
+#define debug_int(x)
+#endif
 
 #endif /* BlueNRG1_CONF_H */
 

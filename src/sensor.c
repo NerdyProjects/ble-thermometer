@@ -3,6 +3,7 @@
 #include "bluenrg1_hal.h"
 #include "hal_types.h"
 #include "clock.h"
+#include "sensor.h"
 
 struct bmp280_dev bmp;
 
@@ -28,6 +29,20 @@ struct bmp280_dev bmp;
 
 #define I2C_RX_DR_BASE_ADDR                (SDK_EVAL_I2C_BASE + 0x18)
 
+static SensorError sensorError = SENSOR_NOT_INITIALIZED;
+/* in case of failure, reset I2C and reinit sensor this amount of times before giving up */
+#define SENSOR_ERROR_RETRY_INIT_COUNT 2
+static uint8_t error_reinit_count = 0;
+
+/* returns and optionally clears sensor error flags */
+SensorError sensor_get_error(uint8_t clear) {
+  SensorError ret = sensorError;
+  if(clear) {
+    sensorError = SENSOR_SUCCESS;
+  }
+  return ret;
+}
+
 /**
  * @brief  Configures I2C interface
  * @param  baudrate I2C clock frequency
@@ -45,7 +60,7 @@ ErrorStatus I2CInit(uint32_t baudrate)
   else {
     SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_GPIO | CLOCK_PERIPH_I2C1, ENABLE);
   }
-      
+
   /* Configure I2C pins */
   GPIO_InitStructure.GPIO_Pin = SDK_EVAL_I2C_CLK_PIN ;
   GPIO_InitStructure.GPIO_Mode = SDK_EVAL_I2C_CLK_MODE;
@@ -196,10 +211,8 @@ int8_t BMP_I2C_Read(uint8_t dev_id, uint8_t reg_addr, uint8_t *data, uint16_t le
   ErrorStatus res = SdkEvalI2CRead(data, dev_id, reg_addr, len);
   if(res != SUCCESS)
   {
-    //while(1)
-     // ;
      debug("Error reading I2C\n");
-
+     sensorError = SENSOR_ERROR_TEMPORARY;
   }
   return res;
 }
@@ -209,13 +222,27 @@ int8_t BMP_I2C_Write(uint8_t dev_id, uint8_t reg_addr, uint8_t *data, uint16_t l
   if(res != SUCCESS)
   {
     debug("Error writing I2C\n");
+    sensorError = SENSOR_ERROR_TEMPORARY;
   }
   return res;
 }
 
-void sensor_init(void) {
+void sensor_deinit(void) {
+  I2C_DeInit(SDK_EVAL_I2C);
+  /* Enable I2C and GPIO clocks */
+  if(SDK_EVAL_I2C == I2C2) {
+    SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_I2C2, DISABLE);
+  }
+  else {
+    SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_I2C1, DISABLE);
+  }
+}
+
+SensorError sensor_init(void) {
   struct bmp280_config conf;
   int8_t res;
+
+  debug("SENSOR init\n");
 
   I2CInit(100000);
   bmp.dev_id = BMP280_I2C_ADDR_SEC;
@@ -230,15 +257,17 @@ void sensor_init(void) {
     res = bmp280_init(&bmp);
     if(res != BMP280_OK) {
       debug("could not find BMP on any I2C address\n");
-      while(1)
-        ;
+      goto fail;
+    } else {
+      debug("Found BMP on prim. Addr\n");
     }
+  } else {
+    debug("Found BMP on sec. Addr\n");
   }
 
   res = bmp280_get_config(&conf, &bmp);
   if(res != BMP280_OK) {
-    while(1)
-      ;
+    goto fail;
   }
 
   /* Overwrite the desired settings */
@@ -249,33 +278,63 @@ void sensor_init(void) {
 
   res = bmp280_set_config(&conf, &bmp);
   if(res != BMP280_OK) {
-    while(1)
-      ;
+    goto fail;
   }
 
   /* Always set the power mode after setting the configuration */
   res = bmp280_set_power_mode(BMP280_SLEEP_MODE, &bmp);
   if(res != BMP280_OK) {
-    while(1)
-      ;
+    goto fail;
+  }
+
+  error_reinit_count = 0;
+  sensorError = SENSOR_SUCCESS;
+  return SENSOR_SUCCESS;
+
+  fail:
+  if(error_reinit_count < SENSOR_ERROR_RETRY_INIT_COUNT) {
+    error_reinit_count++;
+    return sensor_init();
+  } else {
+    sensorError = SENSOR_ERROR_NOT_FOUND;
+    debug("Sensor permanent error: not found\n");
+    return SENSOR_ERROR_NOT_FOUND;
   }
 }
 
-void sensor_measure(void) {
+SensorError sensor_measure(void) {
   uint8_t res = bmp280_set_power_mode(BMP280_FORCED_MODE, &bmp);
   if(res != BMP280_OK) {
-  while(1)
-    ;
+    if(error_reinit_count < SENSOR_ERROR_RETRY_INIT_COUNT) {
+      if(sensor_init() != SENSOR_SUCCESS) {
+        return SENSOR_ERROR_PERSISTENT;
+      }
+      error_reinit_count++;
+      return sensor_measure();
+    }
+    sensorError = SENSOR_ERROR_PERSISTENT;
+    debug("Sensor permanent error: failed to measure\n");
+    return SENSOR_ERROR_PERSISTENT;
   }
+  error_reinit_count = 0;
+  return SENSOR_SUCCESS;
 }
 
+/* reads temperature from sensor. If there is any read errors,
+it returns -32768 (0x8000), reinitializes the sensor and sets an error code.
+Application must take care to properly handle this case. */
 int16_t sensor_read_temperature(void) {
   uint8_t res;
   struct bmp280_uncomp_data ucomp_data;
   res = bmp280_get_uncomp_data(&ucomp_data, &bmp);
   if(res != BMP280_OK) {
-  while(1)
-    ;
+    if(sensor_init() == SENSOR_SUCCESS) {
+      sensorError = SENSOR_ERROR_TEMPORARY;
+    } else {
+      debug("Sensor permanent error: failed while readout\n");
+      sensorError = SENSOR_ERROR_PERSISTENT;
+    }
+    return 0x8000;
   }  
   return bmp280_comp_temp_32bit(ucomp_data.uncomp_temp, &bmp);
 }
