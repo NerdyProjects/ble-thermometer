@@ -56,8 +56,8 @@ void led_init(void) {
   GPIO_InitType gpio;
   /* Enable the GPIO Clock */
   SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_GPIO, ENABLE);
-    
-  /* Configure LED as output */ 
+
+  /* Configure LED as output */
   gpio.GPIO_Pin = GPIO_Pin_0;
   gpio.GPIO_Mode = GPIO_Output;
   gpio.GPIO_Pull = DISABLE;
@@ -117,7 +117,7 @@ static void led_handle(void) {
     }
     led_set_ll(0);
     HAL_VTimerStart_ms(LED_TIMER, nextTime);
-  }  
+  }
 }
 
 /* set LED mode. If count is non-zero, only play pattern count times. */
@@ -155,7 +155,7 @@ void _debug_int(uint32_t num)
     int j = (num >> 4*i) & 0x0F;
     if(j < 10) {
       buf[6-i] = '0' + j;
-    } else { 
+    } else {
       buf[6-i] = 'A' + j - 10;
     }
   }
@@ -167,11 +167,11 @@ void uart_init(void)
 {
   #if DEBUG
   UART_InitType UART_InitStructure;
-  
+
   SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_UART | CLOCK_PERIPH_GPIO, ENABLE);
-  
+
   GPIO_InitType GPIO_InitStructure;
-  
+
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
   GPIO_InitStructure.GPIO_Mode = Serial1_Mode;
   GPIO_InitStructure.GPIO_Pull = DISABLE;
@@ -197,21 +197,21 @@ static void button_init(void)
   GPIO_InitType gpio;
   /* Enable the GPIO Clock */
   SysCtrl_PeripheralClockCmd(CLOCK_PERIPH_GPIO, ENABLE);
-    
-  /* Configure BUTTON as interrupt sources */ 
+
+  /* Configure BUTTON as interrupt sources */
   gpio.GPIO_Pin = GPIO_Pin_11;
   gpio.GPIO_Mode = GPIO_Input;
   gpio.GPIO_Pull = ENABLE;
   gpio.GPIO_HighPwr = DISABLE;
   GPIO_Init(&gpio);
-  
+
   /* Set the GPIO interrupt priority and enable it */
   NVIC_InitType NVIC_InitStructure;
   NVIC_InitStructure.NVIC_IRQChannel = GPIO_IRQn;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = LOW_PRIORITY;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
-  
+
   /* Configures EXTI line */
   GPIO_EXTIConfigType GPIO_EXTIStructure;
   GPIO_EXTIStructure.GPIO_Pin = GPIO_Pin_11;
@@ -221,7 +221,7 @@ static void button_init(void)
 
   /* Clear pending interrupt */
   GPIO_ClearITPendingBit(GPIO_Pin_11);
-  
+
   /* Enable the interrupt */
   GPIO_EXTICmd(GPIO_Pin_11, ENABLE);
 }
@@ -449,7 +449,7 @@ int main(void)
         /* No radio activity, button pressed so likely there was none lately, assume mostly idle and do battery level conversion */
         APP_FLAG_CLEAR(ADC_IDLE_CONVERSION_REQUEST);
         APP_FLAG_SET(ADC_IDLE_CONVERSION_IN_PROGRESS);
-        adc_trigger_read_battery();        
+        adc_trigger_read_battery();
         HAL_VTimerStart_ms(ADC_TIMER, BATTERY_MEASUREMENT_TIME);
       }
     }
@@ -472,6 +472,6 @@ SleepModes App_SleepMode_Check(SleepModes sleepMode) {
   if(APP_FLAG(MEASUREMENT_ENABLED) || ledMode) {
     return SLEEPMODE_WAKETIMER;
   }
-  
+
   return SLEEPMODE_NOTIMER;
 }

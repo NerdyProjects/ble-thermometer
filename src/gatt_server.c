@@ -165,11 +165,11 @@ void handle_recorder_control(uint8_t *data, uint16_t length) {
 }
 
 void setConnectable(void)
-{  
+{
   tBleStatus ret;
-  
+
   hci_le_set_scan_response_data(0, NULL);
-  
+
   ret = aci_gap_set_undirected_connectable(0x0400, 0x0800, STATIC_RANDOM_ADDR, 0x00);
   if(ret != BLE_STATUS_SUCCESS) {
     debug("ERR set_discoverable ");
@@ -182,14 +182,14 @@ void setConnectable(void)
 }
 
 void setPairable(void)
-{  
+{
   tBleStatus ret;
   uint8_t  local_name[] = {AD_TYPE_COMPLETE_LOCAL_NAME,'B','o','d','y','T','h','e','r','m','o','m','e','t','e','r'};
-  
-  hci_le_set_scan_response_data(0, NULL); 
-  
+
+  hci_le_set_scan_response_data(0, NULL);
+
   ret = aci_gap_set_discoverable(ADV_IND, 0x0800, 0x0800, STATIC_RANDOM_ADDR, NO_WHITE_LIST_USE,
-                           16, local_name, 0, NULL, 80, 512);    
+                           16, local_name, 0, NULL, 80, 512);
   if(ret != BLE_STATUS_SUCCESS) {
     debug("ERR set_discoverable");
     debug_int(ret);
@@ -206,7 +206,7 @@ uint8_t BLEDeviceInit(void)
   uint8_t ret;
   uint16_t service_handle, dev_name_char_handle, appearance_char_handle;
   uint8_t name[] = {'T','h','e','r','m','o','m','e','t','e','r'};
-   
+
   ret = aci_gatt_init();
   if(ret != BLE_STATUS_SUCCESS) {
     debug("GATT INIT FAILED\n");
@@ -217,7 +217,7 @@ uint8_t BLEDeviceInit(void)
     debug("SET TX POWER FAILED\n");
   }
 
-  ret = aci_gap_init(GAP_PERIPHERAL_ROLE, 0x00, sizeof(name), &service_handle, 
+  ret = aci_gap_init(GAP_PERIPHERAL_ROLE, 0x00, sizeof(name), &service_handle,
                     &dev_name_char_handle, &appearance_char_handle);
   if(ret != BLE_STATUS_SUCCESS) {
     debug("GAP INIT FAILED\n");
@@ -239,7 +239,7 @@ uint8_t BLEDeviceInit(void)
 
   aci_hal_set_radio_activity_mask(0x0007);
   return ret;
-  
+
 }
 
 tBleStatus Add_Services(void)
@@ -256,18 +256,18 @@ tBleStatus Add_Services(void)
   debug("Add Services\n");
 
   COPY_LIVE_SENS_SERVICE_UUID(uuid);
-  
+
   Osal_MemCpy(&service_uuid.Service_UUID_128, uuid, 16);
-  ret = aci_gatt_add_service(UUID_TYPE_128,  &service_uuid, PRIMARY_SERVICE, 12, &envSensServHandle); 
+  ret = aci_gatt_add_service(UUID_TYPE_128,  &service_uuid, PRIMARY_SERVICE, 12, &envSensServHandle);
   if (ret != BLE_STATUS_SUCCESS) {
     debug("fail add live service\n");
     debug_int(ret);
     goto fail;
   }
-   
+
   /* Temperature Characteristic */
 
-  COPY_TEMP_CHAR_UUID(uuid);  
+  COPY_TEMP_CHAR_UUID(uuid);
   Osal_MemCpy(&char_uuid.Char_UUID_128, uuid, 16);
   ret =  aci_gatt_add_char(envSensServHandle, UUID_TYPE_128, &char_uuid, 2, CHAR_PROP_READ | CHAR_PROP_NOTIFY, ATTR_PERMISSION_AUTHEN_READ | ATTR_PERMISSION_ENCRY_READ, 0,
                      16, 0, &tempCharHandle);
@@ -290,10 +290,10 @@ tBleStatus Add_Services(void)
   ret = aci_gatt_add_char_desc(envSensServHandle,
                          tempCharHandle,
                          UUID_TYPE_16,
-                         &char_desc_uuid, 
+                         &char_desc_uuid,
                          7,
                          7,
-                         (void *)&charFormat, 
+                         (void *)&charFormat,
                          ATTR_PERMISSION_NONE,
                          ATTR_ACCESS_READ_ONLY,
                          0,
@@ -307,7 +307,7 @@ tBleStatus Add_Services(void)
   }
 
   /* Battery idle level characteristic */
-  COPY_IDLE_BATT_CHAR_UUID(uuid);  
+  COPY_IDLE_BATT_CHAR_UUID(uuid);
   Osal_MemCpy(&char_uuid.Char_UUID_128, uuid, 16);
   ret =  aci_gatt_add_char(envSensServHandle, UUID_TYPE_128, &char_uuid, 2, CHAR_PROP_READ, ATTR_PERMISSION_NONE, 0,
                      16, 0, &battIdleCharHandle);
@@ -330,10 +330,10 @@ tBleStatus Add_Services(void)
   ret = aci_gatt_add_char_desc(envSensServHandle,
                          battIdleCharHandle,
                          UUID_TYPE_16,
-                         &char_desc_uuid, 
+                         &char_desc_uuid,
                          7,
                          7,
-                         (void *)&charFormat, 
+                         (void *)&charFormat,
                          ATTR_PERMISSION_NONE,
                          ATTR_ACCESS_READ_ONLY,
                          0,
@@ -346,7 +346,7 @@ tBleStatus Add_Services(void)
     goto fail;
   }
   /* Battery load level characteristic */
-  COPY_LOAD_BATT_CHAR_UUID(uuid);  
+  COPY_LOAD_BATT_CHAR_UUID(uuid);
   Osal_MemCpy(&char_uuid.Char_UUID_128, uuid, 16);
   ret =  aci_gatt_add_char(envSensServHandle, UUID_TYPE_128, &char_uuid, 2, CHAR_PROP_READ, ATTR_PERMISSION_NONE, 0,
                      16, 0, &battLoadCharHandle);
@@ -369,10 +369,10 @@ tBleStatus Add_Services(void)
   ret = aci_gatt_add_char_desc(envSensServHandle,
                          battLoadCharHandle,
                          UUID_TYPE_16,
-                         &char_desc_uuid, 
+                         &char_desc_uuid,
                          7,
                          7,
-                         (void *)&charFormat, 
+                         (void *)&charFormat,
                          ATTR_PERMISSION_NONE,
                          ATTR_ACCESS_READ_ONLY,
                          0,
@@ -430,8 +430,8 @@ tBleStatus Add_Services(void)
     goto fail;
   }
 
-  return BLE_STATUS_SUCCESS; 
-  
+  return BLE_STATUS_SUCCESS;
+
 fail:
   debug("BLE setup error\n");
   return BLE_STATUS_ERROR;
@@ -464,7 +464,7 @@ tBleStatus Battery_Idle_Update(int16_t voltage)
   if (ret != BLE_STATUS_SUCCESS){
           return BLE_STATUS_ERROR;
   }
-  
+
   return BLE_STATUS_SUCCESS;
 }
 
@@ -476,7 +476,7 @@ tBleStatus Battery_Load_Update(int16_t voltage)
   if (ret != BLE_STATUS_SUCCESS){
           return BLE_STATUS_ERROR;
   }
-  
+
   return BLE_STATUS_SUCCESS;
 }
 
@@ -502,7 +502,7 @@ void BLETick(void) {
     debug("Pair\n");
     setPairable();
     APP_FLAG_CLEAR(SET_PUBLIC_CONNECTABLE);
-    connectableAt = time;    
+    connectableAt = time;
   } else if(APP_FLAG(SET_DIRECTED_CONNECTABLE)) {
     if(APP_FLAG(CONNECTABLE)) {
       aci_gap_set_non_discoverable();
@@ -510,9 +510,9 @@ void BLETick(void) {
     debug("Connect\n");
     setConnectable();
     APP_FLAG_CLEAR(SET_DIRECTED_CONNECTABLE);
-    connectableAt = time;    
+    connectableAt = time;
   }
-  
+
   if(APP_FLAG(START_GAP_SLAVE_SECURITY_REQUEST))
   {
     ret = aci_gap_slave_security_req(connection_handle);
@@ -524,7 +524,7 @@ void BLETick(void) {
       debug("SECURITY REQ ERR\n");
     }
   }
-  
+
   if(APP_FLAG(REQUEST_DISABLE_BLE)) {
     disconnect();
   }
@@ -572,7 +572,7 @@ void BLETick(void) {
       debug("TX BUF full, retry...\n");
       recorderReadNext = recorderReadNext_retry;
     }
-    
+
   }
 }
 
@@ -595,7 +595,7 @@ void hci_le_connection_complete_event(uint8_t Status,
                                       uint16_t Conn_Latency,
                                       uint16_t Supervision_Timeout,
                                       uint8_t Master_Clock_Accuracy)
-{ 
+{
   connection_handle = Connection_Handle;
   APP_FLAG_CLEAR(CONNECTABLE);
   APP_FLAG_SET(CONNECTED);
@@ -646,7 +646,7 @@ void aci_gatt_attribute_modified_event(uint16_t Connection_Handle,
 }
 
 /* aci_gatt_read_permit_req_event()
-*/ 
+*/
 void aci_gatt_read_permit_req_event(uint16_t Connection_Handle,
                                     uint16_t Attribute_Handle,
                                     uint16_t Offset)
@@ -680,8 +680,8 @@ void aci_hal_end_of_radio_activity_event(uint8_t Last_State,
 void aci_gap_pass_key_req_event(uint16_t Connection_Handle)
 {
   if(APP_FLAG(PAIRABLE)) {
-    uint8_t status; 
-  
+    uint8_t status;
+
     status = aci_gap_pass_key_resp(Connection_Handle, 10134);
     if (status != BLE_STATUS_SUCCESS) {
       debug("aci_gap_pass_key_resp failed\n");
@@ -696,8 +696,8 @@ void aci_gap_pass_key_req_event(uint16_t Connection_Handle)
 
 void aci_gap_bond_lost_event(void)
 {
-  uint8_t ret; 
-  
+  uint8_t ret;
+
   ret = aci_gap_allow_rebond(connection_handle);
   debug("rebond\n");
 }
