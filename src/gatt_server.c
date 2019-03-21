@@ -43,6 +43,9 @@ static uint16_t recorderRingWritePos;
 static uint16_t recorderReadLast;
 static uint16_t recorderReadNext;
 
+static uint32_t recorderLastTimestamp;
+static volatile uint32_t lastTemperatureSecondsAgo;
+
 /* UUIDS */
 #define COPY_LIVE_SENS_SERVICE_UUID(uuid_struct)  COPY_UUID_128(uuid_struct,0x0e,0xed,0x81,0x8d,0xb4,0xb3,0x6e,0x04,0x39,0x57,0xce,0x09,0x68,0x84,0xca,0x85)
 #define COPY_TEMP_CHAR_UUID(uuid_struct)         COPY_UUID_128(uuid_struct,0x44,0xc4,0x6f,0xa8,0xd6,0xaa,0xb1,0xfd,0xc3,0x46,0x22,0x6a,0x0a,0xf3,0xf3,0x83)
@@ -61,12 +64,14 @@ static uint16_t recorderReadNext;
 #define RECORDER_CMD_RESET_STORAGE 0x5
 #define RECORDER_CMD_RESET_TO_OTA 0x6
 
+#define RECORDER_META_INVALID 0x0
 #define RECORDER_META_START_MEASUREMENT 0x0003
 #define RECORDER_META_STOP_MEASUREMENT 0x0002
-#define RECORDER_META_MEASUREMENT_INTERVAL 0x4000 /* 0x4000-0x7FFF */
-#define RECORDER_META_INVALID 0x3FFF
+#define RECORDER_META_MEASUREMENT_INTERVAL 0x1000 /* 0x1000-0x1FFF -> 12 bit */
+#define RECORDER_META_TIME_ELAPSED 0x4000 /* 0x4000-0x7FFF -> 14 bits. If used twice without other dataset in between, interpreted as 28 bit number, LSB first. */
 #define RECORDER_META_MASK 0x8000
 
+#define RECORDER_TIME_ELAPSED_MAX_VALUE 0x3FFF
 
 static uint16_t ring_addr_add(uint16_t addr, int16_t offset)
 {
@@ -102,10 +107,13 @@ void ring_push_meta(uint16_t data)
 }
 
 void recorder_enable_measurement(void) {
+  APP_FLAG_SET(RECORDING_ENABLED);
+  APP_FLAG_SET(STORE_RECORD_TIME_DIFFERENCE);
   ring_push_meta(RECORDER_CMD_START_MEASUREMENT);
 }
 
 void recorder_disable_measurement(void) {
+  APP_FLAG_CLEAR(RECORDING_ENABLED);
   ring_push_meta(RECORDER_CMD_STOP_MEASUREMENT);
 }
 
@@ -437,13 +445,44 @@ fail:
   return BLE_STATUS_ERROR;
 }
 
-/*******************************************************************************
-* Function Name  : Temp_Update
-* Description    : Update temperature characteristic value
-* Input          : temperature in hundreds of degree
-* Return         : Status.
-*******************************************************************************/
-tBleStatus Temp_Update(int16_t temp)
+static void Temp_Record(int16_t temp, uint32_t timestamp)
+{
+  if(APP_FLAG(STORE_RECORD_TIME_DIFFERENCE)) {
+    uint32_t seconds = lastTemperatureSecondsAgo;
+    APP_FLAG_CLEAR(STORE_RECORD_TIME_DIFFERENCE);
+    /* update seconds elapsed calculation */
+    Recorder_notify_time(timestamp);
+    if(seconds > RECORDER_TIME_ELAPSED_MAX_VALUE) {
+      /* store use time elapsed tag twice to increment bit width, LSB first */
+      ring_push_meta(RECORDER_META_TIME_ELAPSED + (seconds & RECORDER_TIME_ELAPSED_MAX_VALUE));
+      ring_push_meta(RECORDER_META_TIME_ELAPSED + seconds / (RECORDER_TIME_ELAPSED_MAX_VALUE + 1));
+    } else {
+      ring_push_meta(RECORDER_META_TIME_ELAPSED + seconds);
+    }
+  }
+  recorderLastTimestamp = timestamp;
+  lastTemperatureSecondsAgo = 0;
+  ring_push_data(temp);
+}
+
+/* Notify the recorder about a time that has elapsed. This is used to track time between
+measurements: when recording is stopped and started again, the time difference between the last
+notification before the last measurement to the last notification before the first-again measurement
+is added to the ring.
+
+internal timestamp to ms:
+ms = 5*ts/2048
+*/
+void Recorder_notify_time(uint32_t absoluteTime)
+{
+  lastTemperatureSecondsAgo += HAL_VTimerDiff_ms_sysT32(absoluteTime, recorderLastTimestamp) / 1000;
+  recorderLastTimestamp = absoluteTime;
+}
+
+/* Notify recorder and characteristics about updated temperature.
+Timestamp should match approximately the time of the measurement so the recorder can keep
+track of time intervals in between recordings stopped/started */
+tBleStatus Temp_Update(int16_t temp, uint32_t timestamp)
 {
   tBleStatus ret;
   ret = aci_gatt_update_char_value_ext(0, envSensServHandle, tempCharHandle, 1,2, 0, 2, (uint8_t*)&temp);
@@ -451,8 +490,10 @@ tBleStatus Temp_Update(int16_t temp)
           return BLE_STATUS_ERROR;
   }
 
-  ring_push_data(temp);
-  
+  if(APP_FLAG(RECORDING_ENABLED)) {
+    Temp_Record(temp, timestamp);
+  }
+
   return BLE_STATUS_SUCCESS;
 }
 

@@ -36,6 +36,8 @@ extern volatile int app_flags;
 #define REQUEST_ENABLE_MEASUREMENT               0x0800000
 
 #define REQUEST_RING_CLEAR                      0x1000000
+#define RECORDING_ENABLED                       0x2000000
+#define STORE_RECORD_TIME_DIFFERENCE            0x4000000
 
 
 

@@ -44,6 +44,9 @@
 
 #define SENSOR_READ_DURATION_MS 30
 static volatile uint32_t sensor_update_rate = 15000;
+/* recorder tracks time even when measurement is disabled. Notify time counter in this interval.
+Interval is limited to 52xxxxx due to internal resolution/overflow. */
+#define STANDBY_RECORDER_TIME_UPDATE_RATE 5200000
 static uint32_t next_sensor_interval;
 
 static volatile LedMode ledMode;
@@ -331,31 +334,37 @@ static void APP_Tick(void)
   }
   if(APP_FLAG(SENSOR_TIMER_ELAPSED)) {
     APP_FLAG_CLEAR(SENSOR_TIMER_ELAPSED);
-    if(APP_FLAG(SENSOR_MEASUREMENT_TRIGGERED)) {
-      APP_FLAG_CLEAR(SENSOR_MEASUREMENT_TRIGGERED);
-      debug("S READ\n");
-      int16_t temperature = sensor_read_temperature();
-      SensorError res = sensor_get_error(0);
-      if(res != SENSOR_SUCCESS) {
-        debug("S ERR\n");
-        /* This temperature result is invalid. Sensor code already reset hardware, but there is no result available at this point */
-        if(res == SENSOR_ERROR_PERSISTENT) {
-          debug("SENSOR UNVAILABLE\n");
-          APP_FLAG_SET(SENSOR_UNAVAILABLE);
-        }
-        if(res == SENSOR_ERROR_TEMPORARY) {
-          debug("retrigger sensor after error\n");
-          trigger_sensor_measurement();
+    if(APP_FLAG(MEASUREMENT_ENABLED) && !APP_FLAG(SENSOR_UNAVAILABLE)) {
+      if(APP_FLAG(SENSOR_MEASUREMENT_TRIGGERED)) {
+        APP_FLAG_CLEAR(SENSOR_MEASUREMENT_TRIGGERED);
+        debug("S READ\n");
+        int16_t temperature = sensor_read_temperature();
+        SensorError res = sensor_get_error(0);
+        if(res != SENSOR_SUCCESS) {
+          debug("S ERR\n");
+          /* This temperature result is invalid. Sensor code already reset hardware, but there is no result available at this point */
+          if(res == SENSOR_ERROR_PERSISTENT) {
+            debug("SENSOR UNVAILABLE\n");
+            APP_FLAG_SET(SENSOR_UNAVAILABLE);
+          }
+          if(res == SENSOR_ERROR_TEMPORARY) {
+            debug("retrigger sensor after error\n");
+            trigger_sensor_measurement();
+          }
+        } else {
+          Temp_Update(temperature, next_sensor_interval);
+          /* step absolute sensor interval for constant period */
+          next_sensor_interval = HAL_VTimerAcc_sysT32_ms(next_sensor_interval, sensor_update_rate);
+          debug("sens int\n");
+          HAL_VTimerStart_sysT32(SENSOR_TIMER, next_sensor_interval);
         }
       } else {
-        Temp_Update(temperature);
-        /* step absolute sensor interval for constant period */
-        next_sensor_interval = HAL_VTimerAcc_sysT32_ms(next_sensor_interval, sensor_update_rate);
-        debug("sens int\n");
-        HAL_VTimerStart_sysT32(SENSOR_TIMER, next_sensor_interval);
+        trigger_sensor_measurement();
       }
-    } else {    
-      trigger_sensor_measurement();
+    } else {
+      Recorder_notify_time(next_sensor_interval);
+      next_sensor_interval = HAL_VTimerAcc_sysT32_ms(next_sensor_interval, STANDBY_RECORDER_TIME_UPDATE_RATE);
+      HAL_VTimerStart_sysT32(SENSOR_TIMER, next_sensor_interval);
     }
   }
   if(APP_FLAG(SENSOR_UNAVAILABLE)) {
@@ -367,10 +376,7 @@ void HAL_VTimerTimeoutCallback(uint8_t timerNum)
 {
   if (timerNum == SENSOR_TIMER) {
     debug("S");
-    if(APP_FLAG(MEASUREMENT_ENABLED) && !APP_FLAG(SENSOR_UNAVAILABLE)) {
-      debug("E");
-      APP_FLAG_SET(SENSOR_TIMER_ELAPSED);
-    }
+    APP_FLAG_SET(SENSOR_TIMER_ELAPSED);
     debug("\n");
   }
   if(timerNum == LED_TIMER) {
