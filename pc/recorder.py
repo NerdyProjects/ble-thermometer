@@ -93,14 +93,17 @@ class Recorder():
                     print("Start measurement")
                 elif d == 0x8002:
                     print("Stop measurement")
-                elif d == 0xBFFF:
+                elif d == 0x8000:
                     print("()")
-                elif d & 0xC000:
-                    print("Measurement interval: %d s" % (d & 0x3FFF))
+                elif (d & 0xF000) == 0x9000:
+                    print("Measurement interval: %d s" % (d & 0x0FFF))
+                elif (d & 0xC000) == 0xC000:
+                    print("Time elapsed: %d s" % (d & 0x3FFF))
                 else:
                     if d & 0x4000:
-                        d = -d
-                    print("%f °C" % (d / 100))
+                        print("negative temperature")
+                    else:
+                        print("%f °C" % (d / 100))
                 
             self.remaining_packets = self.remaining_packets - 10
             if self.remaining_packets <= 0:
