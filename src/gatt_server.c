@@ -641,8 +641,15 @@ void BLETick(void) {
 
 static void updateRecorderStatus(void) {
   uint16_t ring_used_space = ring_count_used();
+  uint16_t max_connection_time_s = max_connection_time / 1000;
+  uint16_t max_connectable_time_s = max_connectable_time / 1000;
+  uint16_t sensor_update_rate_s = get_measurement_interval();
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 0, 4, &app_flags);
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 4, 2, &ring_used_space);
+  aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 6, 2, &max_connection_time_s);
+  aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 8, 2, &max_connection_time_s);
+  aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 10, 2, &sensor_update_rate_s);
+
 }
 
 /* ***************** BlueNRG-1 Stack Callbacks ********************************/

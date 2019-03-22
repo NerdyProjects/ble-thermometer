@@ -307,6 +307,11 @@ void set_measurement_interval(uint16_t seconds)
   sensor_update_rate = seconds * 1000;
 }
 
+uint16_t get_measurement_interval(void)
+{
+  return sensor_update_rate / 1000;
+}
+
 static void trigger_sensor_measurement(void) {
   if(sensor_measure() != SENSOR_SUCCESS) {
     APP_FLAG_SET(SENSOR_UNAVAILABLE);
