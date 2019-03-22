@@ -304,7 +304,7 @@ void disable_measurement(void)
 void set_measurement_interval(uint16_t seconds)
 {
   /* update recorder with measurement interval _previous_ to this update */
-  recorder_set_measurement_interval(get_measurement_interval);
+  recorder_set_measurement_interval(get_measurement_interval());
   sensor_update_rate = seconds * 1000;
 }
 
