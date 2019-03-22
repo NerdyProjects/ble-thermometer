@@ -35,12 +35,12 @@
 #define RC32K_FREQ		32768
 #define RELOAD_TIME(sec)        ((sec*RC32K_FREQ)-3)
 
-#define LED_FLASH_ON_MS 50
-#define LED_FLASH_OFF_MS 900
+#define LED_FLASH_ON_MS 20
+#define LED_FLASH_OFF_MS 1500
 #define LED_FAST_FLASH_ON_MS 20
 #define LED_FAST_FLASH_OFF_MS 300
-#define LED_BLINK_ON_MS 180
-#define LED_BLINK_OFF_MS 300
+#define LED_BLINK_ON_MS 150
+#define LED_BLINK_OFF_MS 400
 
 #define SENSOR_READ_DURATION_MS 30
 static volatile uint32_t sensor_update_rate = 15000;
@@ -324,12 +324,12 @@ static void APP_Tick(void)
     APP_FLAG_CLEAR(REQUEST_DISABLE_MEASUREMENT);
     disable_measurement();
     APP_FLAG_CLEAR(REQUEST_DISABLE_MEASUREMENT);
-    led_set(LED_BLINK, 1);
+    led_set(LED_FAST_FLASH, 2);
   }
   if(APP_FLAG(REQUEST_ENABLE_MEASUREMENT)) {
     APP_FLAG_CLEAR(REQUEST_ENABLE_MEASUREMENT);
     enable_measurement();
-    led_set(LED_FAST_FLASH, 5);
+    led_set(LED_FAST_FLASH, 4);
   }
   if(APP_FLAG(SENSOR_TIMER_ELAPSED)) {
     APP_FLAG_CLEAR(SENSOR_TIMER_ELAPSED);

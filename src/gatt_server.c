@@ -206,7 +206,7 @@ void setConnectable(void)
     debug_int(ret);
     debug("\n");
   } else {
-    led_set(LED_BLINK, 0);
+    led_set(LED_FAST_FLASH, 0);
     APP_FLAG_SET(CONNECTABLE);
   }
 }
@@ -225,7 +225,7 @@ void setPairable(void)
     debug_int(ret);
     debug("\n");
   } else {
-    led_set(LED_FAST_FLASH, 0);
+    led_set(LED_BLINK, 0);
     APP_FLAG_SET(CONNECTABLE);
     APP_FLAG_SET(PAIRABLE);
   }
