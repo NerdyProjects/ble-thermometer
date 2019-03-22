@@ -32,6 +32,7 @@ static uint32_t connectableAt;
 static uint32_t connectedAt;
 /* terminate a connection after this time */
 static int32_t max_connection_time = 3*60000;
+static int32_t max_connectable_time = 2*60000;
 
 #define DATA_PACKET_SIZE 20
 
@@ -63,10 +64,14 @@ static volatile uint32_t lastTemperatureSecondsAgo;
 #define RECORDER_CMD_SET_MEASUREMENT_INTERVAL 0x4
 #define RECORDER_CMD_RESET_STORAGE 0x5
 #define RECORDER_CMD_RESET_TO_OTA 0x6
+#define RECORDER_CMD_SET_CONNECTABLE_TIMEOUT 0x7
+#define RECORDER_CMD_SET_CONNECTION_TIMEOUT 0x8
+#define RECORDER_CMD_SET_RECONNECTABLE 0x9
+#define RECORDER_CMD_RESET_RECONNECTABLE 0x10
 
 #define RECORDER_META_INVALID 0x0
-#define RECORDER_META_START_MEASUREMENT 0x0003
 #define RECORDER_META_STOP_MEASUREMENT 0x0002
+#define RECORDER_META_START_MEASUREMENT 0x0003
 #define RECORDER_META_MEASUREMENT_INTERVAL 0x1000 /* 0x1000-0x1FFF -> 12 bit */
 #define RECORDER_META_TIME_ELAPSED 0x4000 /* 0x4000-0x7FFF -> 14 bits. If used twice without other dataset in between, interpreted as 28 bit number, LSB first. */
 #define RECORDER_META_MASK 0x8000
@@ -144,8 +149,9 @@ static uint16_t ring_count_used(void) {
 
 void handle_recorder_control(uint8_t *data, uint16_t length) {
   if(length >= 3) {
+    uint16_t v = data[1] + (data[2] << 8);
     if(data[0] == RECORDER_CMD_READ) {
-      uint16_t readLength = data[1] + (data[2] << 8);
+      uint16_t readLength = v;
       recorderReadLast = ring_addr_add(recorderRingWritePos, -1);
       recorderReadNext = ring_addr_add(recorderRingWritePos, -readLength);
       APP_FLAG_SET(READ_RECORDER_BUFFER);
@@ -158,7 +164,7 @@ void handle_recorder_control(uint8_t *data, uint16_t length) {
       APP_FLAG_SET(REQUEST_DISABLE_MEASUREMENT);
     }
     if(data[0] == RECORDER_CMD_SET_MEASUREMENT_INTERVAL) {
-      uint16_t interval_seconds = data[1] + (data[2] << 8);
+      uint16_t interval_seconds = v;
       if(interval_seconds >= 1 && interval_seconds < 0x3FFF) {
         set_measurement_interval(interval_seconds);
       }
@@ -168,6 +174,22 @@ void handle_recorder_control(uint8_t *data, uint16_t length) {
     }
     if(data[0] == RECORDER_CMD_RESET_TO_OTA) {
       NVIC_SystemReset();
+    }
+    if(data[0] == RECORDER_CMD_SET_CONNECTION_TIMEOUT) {
+      if(v < 5200) {
+        max_connection_time = v * 1000;
+      }
+    }
+    if(data[0] == RECORDER_CMD_SET_CONNECTABLE_TIMEOUT) {
+      if(v < 5200) {
+        max_connectable_time = v * 1000;
+      }
+    }
+    if(data[0] == RECORDER_CMD_SET_RECONNECTABLE) {
+      APP_FLAG_SET(ALLOW_CONNECT_AFTER_DISCONNECT);
+    }
+    if(data[0] == RECORDER_CMD_RESET_RECONNECTABLE) {
+      APP_FLAG_CLEAR(ALLOW_CONNECT_AFTER_DISCONNECT);
     }
   }
 }
@@ -570,11 +592,11 @@ void BLETick(void) {
     disconnect();
   }
 
-  if(APP_FLAG(CONNECTABLE) && HAL_VTimerDiff_ms_sysT32(time, connectableAt) > 3 * 60000) {
+  if(APP_FLAG(CONNECTABLE) && max_connectable_time && HAL_VTimerDiff_ms_sysT32(time, connectableAt) > max_connectable_time) {
     disconnect();
   }
 
-  if(APP_FLAG(CONNECTED) && HAL_VTimerDiff_ms_sysT32(time, connectedAt) > max_connection_time) {
+  if(APP_FLAG(CONNECTED) && max_connection_time && HAL_VTimerDiff_ms_sysT32(time, connectedAt) > max_connection_time) {
     disconnect();
   }
 
@@ -668,10 +690,12 @@ void hci_disconnection_complete_event(uint8_t Status,
                                       uint16_t Connection_Handle,
                                       uint8_t Reason)
 {
-  /* Make the device connectable again. */
   connection_handle = 0;
   APP_FLAG_CLEAR(CONNECTED);
   disconnect();
+  if(APP_FLAG(ALLOW_CONNECT_AFTER_DISCONNECT)) {
+    APP_FLAG_SET(SET_DIRECTED_CONNECTABLE);
+  }
 }/* end hci_disconnection_complete_event() */
 
 void aci_gatt_attribute_modified_event(uint16_t Connection_Handle,

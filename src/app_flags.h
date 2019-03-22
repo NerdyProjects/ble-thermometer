@@ -16,7 +16,7 @@ extern volatile int app_flags;
 #define CONFIRMATION_RECEIVED    0x000080
 
 #define START_GAP_SLAVE_SECURITY_REQUEST    0x000100
-#define HCI_ENCRYPTION_CHANGE_EVENT_FLAG    0x000200 
+#define HCI_ENCRYPTION_CHANGE_EVENT_FLAG    0x000200
 #define ACI_GAP_PAIRING_COMPLETE_EVENT_FLAG 0x000800
 #define TRIGGER_DATA_TRANSFER               0x000400
 
@@ -38,6 +38,7 @@ extern volatile int app_flags;
 #define REQUEST_RING_CLEAR                      0x1000000
 #define RECORDING_ENABLED                       0x2000000
 #define STORE_RECORD_TIME_DIFFERENCE            0x4000000
+#define ALLOW_CONNECT_AFTER_DISCONNECT          0x8000000
 
 
 
