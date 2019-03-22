@@ -447,6 +447,11 @@ int main(void)
 
     APP_Tick();
     WDG_Reload();
+    /* Careful: I have had wakeup problems with SLEEPMODE_NOTIMER. After SLEEPMODE_NOTIMER has been used, later sleeps with
+    SLEEPMODE_WAKETIMER did not wake the system when Vtimers elapsed. This was reproducable ~1/3 of the time. Button wakeup still
+    worked, but vtimer timings seemed really broken. Similarly broken behaviour has not been observed without NOTIMER.
+    I don't know if there is a bug in the library somewhere or I did another mistake. Anyway, by keeping WAKETIMER active, we get
+    time tracking for free. That's a cool feature, so accept it without further digging. */
     BlueNRG_Sleep(SLEEPMODE_WAKETIMER, WAKEUP_IO11, WAKEUP_IOx_LOW << WAKEUP_IO11_SHIFT_MASK);
     if(BlueNRG_WakeupSource() == WAKEUP_IO11) {
       button_handle();
@@ -471,7 +476,10 @@ SleepModes App_SleepMode_Check(SleepModes sleepMode) {
     return SLEEPMODE_CPU_HALT;
   }
   #endif
-  if(ledState || APP_FLAG(ADC_IDLE_CONVERSION_IN_PROGRESS) || APP_FLAG(ADC_LOAD_CONVERSION_IN_PROGRESS)) {
+  if(!GPIO_ReadBit(GPIO_Pin_11) || ledState || APP_FLAG(ADC_IDLE_CONVERSION_IN_PROGRESS) || APP_FLAG(ADC_LOAD_CONVERSION_IN_PROGRESS)) {
+    /* Button is pressed: Deepsleep would not happen, but CPU_HALT can wait for (GPIO) interrupt
+       led is on: need to keep GPIO peripheral active
+       ADC conversion running: need to keep ADC active */
     return SLEEPMODE_CPU_HALT;
   }
   if(APP_FLAG(MEASUREMENT_ENABLED) || ledMode) {
