@@ -156,8 +156,8 @@ void handle_recorder_control(uint8_t *data, uint16_t length) {
     uint16_t v = data[1] + (data[2] << 8);
     if(data[0] == RECORDER_CMD_READ) {
       uint16_t readLength = v;
-      recorderReadLast = ring_addr_add(recorderRingWritePos, -1);
-      recorderReadNext = ring_addr_add(recorderRingWritePos, -readLength);
+      recorderReadLast = ring_addr_add(recorderRingWritePos, -readLength);
+      recorderReadNext = ring_addr_add(recorderRingWritePos, -1);
       APP_FLAG_SET(READ_RECORDER_BUFFER);
       APP_FLAG_SET(TRIGGER_DATA_TRANSFER);
     }
@@ -619,7 +619,7 @@ void BLETick(void) {
       if(recorderReadNext == recorderReadLast) {
         done = 1;
       } else {
-        recorderReadNext = ring_addr_add(recorderReadNext, 1);
+        recorderReadNext = ring_addr_add(recorderReadNext, -1);
       }
     }
     ret = aci_gatt_update_char_value_ext(connection_handle, recorderServHandle, recorderDataCharHandle, 0x02, DATA_PACKET_SIZE, 0, DATA_PACKET_SIZE, (uint8_t *)buf);
