@@ -470,16 +470,17 @@ fail:
 static void Temp_Record(int16_t temp, uint32_t timestamp)
 {
   if(APP_FLAG(STORE_RECORD_TIME_DIFFERENCE)) {
-    uint32_t seconds = lastTemperatureSecondsAgo;
+    uint32_t seconds;
     APP_FLAG_CLEAR(STORE_RECORD_TIME_DIFFERENCE);
     /* update seconds elapsed calculation */
     Recorder_notify_time(timestamp);
+    seconds = lastTemperatureSecondsAgo;
     if(seconds > RECORDER_TIME_ELAPSED_MAX_VALUE) {
       /* store use time elapsed tag twice to increment bit width, LSB first */
-      ring_push_meta(RECORDER_META_TIME_ELAPSED + (seconds & RECORDER_TIME_ELAPSED_MAX_VALUE));
-      ring_push_meta(RECORDER_META_TIME_ELAPSED + seconds / (RECORDER_TIME_ELAPSED_MAX_VALUE + 1));
+      ring_push_meta(RECORDER_META_TIME_ELAPSED | (seconds & RECORDER_TIME_ELAPSED_MAX_VALUE));
+      ring_push_meta(RECORDER_META_TIME_ELAPSED | (seconds / (RECORDER_TIME_ELAPSED_MAX_VALUE + 1)));
     } else {
-      ring_push_meta(RECORDER_META_TIME_ELAPSED + seconds);
+      ring_push_meta(RECORDER_META_TIME_ELAPSED | seconds);
     }
   }
   recorderLastTimestamp = timestamp;
@@ -647,7 +648,7 @@ static void updateRecorderStatus(void) {
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 0, 4, &app_flags);
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 4, 2, &ring_used_space);
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 6, 2, &max_connection_time_s);
-  aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 8, 2, &max_connection_time_s);
+  aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 8, 2, &max_connectable_time_s);
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 10, 2, &sensor_update_rate_s);
 
 }
