@@ -296,7 +296,6 @@ static void APP_Init(void)
 void disable_measurement(void)
 {
   APP_FLAG_CLEAR(MEASUREMENT_ENABLED);
-  HAL_VTimer_Stop(SENSOR_TIMER);
   APP_FLAG_CLEAR(SENSOR_MEASUREMENT_TRIGGERED);
   sensor_deinit();
   recorder_disable_measurement();
