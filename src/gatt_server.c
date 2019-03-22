@@ -28,11 +28,11 @@ static uint16_t envSensServHandle, tempCharHandle, battIdleCharHandle, battLoadC
 static uint16_t recorderServHandle, recorderControlCharHandle, recorderStatusCharHandle, recorderDataCharHandle;
 volatile uint16_t connection_handle;
 
-static uint32_t connectableAt;
-static uint32_t connectedAt;
+static volatile uint32_t connectableAt;
+static volatile uint32_t connectedAt;
 /* terminate a connection after this time */
-static int32_t max_connection_time = 3*60000;
-static int32_t max_connectable_time = 2*60000;
+static volatile int32_t max_connection_time = 3*60000;
+static volatile int32_t max_connectable_time = 2*60000;
 
 #define DATA_PACKET_SIZE 20
 
@@ -46,6 +46,10 @@ static uint16_t recorderReadNext;
 
 static uint32_t recorderLastTimestamp;
 static volatile uint32_t lastTemperatureSecondsAgo;
+
+#ifndef GIT_HASH
+#error "GIT_HASH should be defined"
+#endif
 
 /* UUIDS */
 #define COPY_LIVE_SENS_SERVICE_UUID(uuid_struct)  COPY_UUID_128(uuid_struct,0x0e,0xed,0x81,0x8d,0xb4,0xb3,0x6e,0x04,0x39,0x57,0xce,0x09,0x68,0x84,0xca,0x85)
@@ -435,7 +439,7 @@ tBleStatus Add_Services(void)
   /* Status characteristic */
   COPY_RECORDER_STATUS_UUID(uuid);
   Osal_MemCpy(&char_uuid.Char_UUID_128, uuid, 16);
-  ret = aci_gatt_add_char(recorderServHandle, UUID_TYPE_128, &char_uuid, 16, CHAR_PROP_READ, ATTR_PERMISSION_AUTHEN_READ, GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP, 16, 0, &recorderStatusCharHandle);
+  ret = aci_gatt_add_char(recorderServHandle, UUID_TYPE_128, &char_uuid, 20, CHAR_PROP_READ, ATTR_PERMISSION_AUTHEN_READ, GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP, 16, 0, &recorderStatusCharHandle);
   if (ret != BLE_STATUS_SUCCESS) {
     debug("fail add recorder status\n");
     debug_int(ret);
@@ -645,12 +649,15 @@ static void updateRecorderStatus(void) {
   uint16_t max_connection_time_s = max_connection_time / 1000;
   uint16_t max_connectable_time_s = max_connectable_time / 1000;
   uint16_t sensor_update_rate_s = get_measurement_interval();
+  uint32_t last_temperature_update_s = lastTemperatureSecondsAgo + HAL_VTimerDiff_ms_sysT32(HAL_VTimerGetCurrentTime_sysT32(), recorderLastTimestamp)/1000;
+  uint32_t git_hash = GIT_HASH;
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 0, 4, &app_flags);
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 4, 2, &ring_used_space);
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 6, 2, &max_connection_time_s);
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 8, 2, &max_connectable_time_s);
   aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 10, 2, &sensor_update_rate_s);
-
+  aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 12, 4, &last_temperature_update_s);
+  aci_gatt_update_char_value(recorderServHandle, recorderStatusCharHandle, 16, 4, &git_hash);
 }
 
 /* ***************** BlueNRG-1 Stack Callbacks ********************************/
