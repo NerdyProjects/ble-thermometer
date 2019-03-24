@@ -50,9 +50,9 @@ class Recorder():
 
     def get_status(self):
         status = self.status_char.read()
-        flags, recorder_size = unpack("<IH10x", status)
-        print("Flags: %8X recorder buffer used: %d" % (flags, recorder_size))
-        return flags, recorder_size
+        flags, recorder_size, max_connection_time, max_connectable_time, sensor_update_rate, last_temperature_update, src_version = unpack("<IHHHHII", status)
+        print("Flags: %8X buffer used: %d connection time: %d s, connectable time: %d s, sensor rate: %d s, recent measurement age: %d s, git hash %8x" % (flags, recorder_size, max_connection_time, max_connectable_time, sensor_update_rate, last_temperature_update, src_version))
+        return flags, recorder_size, max_connection_time, max_connectable_time, sensor_update_rate, last_temperature_update, src_version
 
     def write_readout_command(self, size):
         data = pack("<BH", 1, size)
