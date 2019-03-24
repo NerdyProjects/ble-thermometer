@@ -45,8 +45,10 @@
 #define SENSOR_READ_DURATION_MS 30
 static volatile uint32_t sensor_update_rate = 15000;
 /* recorder tracks time even when measurement is disabled. Notify time counter in this interval.
-Interval is limited to 52xxxxx due to internal resolution/overflow. */
-#define STANDBY_RECORDER_TIME_UPDATE_RATE 5200000
+Interval is limited to 52xxxxx due to internal resolution/overflow.
+Also, I had effects that look like overflows in the calculation, use less than half the allowed range
+to work around any potential sign-issues. */
+#define STANDBY_RECORDER_TIME_UPDATE_RATE 2600000
 static uint32_t next_sensor_interval;
 
 static volatile LedMode ledMode;
@@ -277,7 +279,6 @@ void enable_measurement(void)
   if(!APP_FLAG(SENSOR_UNAVAILABLE)) {
     next_sensor_interval = HAL_VTimerGetCurrentTime_sysT32();
     recorder_enable_measurement();
-    recorder_set_measurement_interval(sensor_update_rate / 1000);
     /* initially measure sensor now */
     APP_FLAG_SET(MEASUREMENT_ENABLED);
     HAL_VTimerStart_ms(SENSOR_TIMER, 100);

@@ -28,7 +28,7 @@ static uint16_t envSensServHandle, tempCharHandle, battIdleCharHandle, battLoadC
 static uint16_t recorderServHandle, recorderControlCharHandle, recorderStatusCharHandle, recorderDataCharHandle;
 volatile uint16_t connection_handle;
 
-static volatile uint32_t connectableAt;
+static uint32_t connectableAt;
 static volatile uint32_t connectedAt;
 /* terminate a connection after this time */
 static volatile int32_t max_connection_time = 3*60000;
@@ -45,7 +45,7 @@ static uint16_t recorderReadLast;
 static uint16_t recorderReadNext;
 
 static uint32_t recorderLastTimestamp;
-static volatile uint32_t lastTemperatureSecondsAgo;
+static uint32_t lastTemperatureSecondsAgo;
 
 #ifndef GIT_HASH
 #error "GIT_HASH should be defined"
@@ -79,6 +79,11 @@ static volatile uint32_t lastTemperatureSecondsAgo;
 #define RECORDER_META_MEASUREMENT_INTERVAL 0x1000 /* 0x1000-0x1FFF -> 12 bit */
 #define RECORDER_META_TIME_ELAPSED 0x4000 /* 0x4000-0x7FFF -> 14 bits. If used twice without other dataset in between, interpreted as 28 bit number, LSB first. */
 #define RECORDER_META_MASK 0x8000
+
+/* maximum measurement interval comes from theoretical maximum of data type, theoretical maximum of timer and observed overflow problems.
+If needed, could implement a software timer extension to allow longer times, so far, these ~43 minutes should be enough */
+#define MAX_MEASUREMENT_INTERVAL_S 2580
+#define MAX_TIMEOUT_INTERVAL_S 2580
 
 #define RECORDER_TIME_ELAPSED_MAX_VALUE 0x3FFF
 
@@ -169,7 +174,7 @@ void handle_recorder_control(uint8_t *data, uint16_t length) {
     }
     if(data[0] == RECORDER_CMD_SET_MEASUREMENT_INTERVAL) {
       uint16_t interval_seconds = v;
-      if(interval_seconds >= 1 && interval_seconds < 0x3FFF) {
+      if(interval_seconds >= 1 && interval_seconds < MAX_MEASUREMENT_INTERVAL_S) {
         set_measurement_interval(interval_seconds);
       }
     }
@@ -180,12 +185,12 @@ void handle_recorder_control(uint8_t *data, uint16_t length) {
       NVIC_SystemReset();
     }
     if(data[0] == RECORDER_CMD_SET_CONNECTION_TIMEOUT) {
-      if(v < 5200) {
+      if(v < MAX_TIMEOUT_INTERVAL_S) {
         max_connection_time = v * 1000;
       }
     }
     if(data[0] == RECORDER_CMD_SET_CONNECTABLE_TIMEOUT) {
-      if(v < 5200) {
+      if(v < MAX_TIMEOUT_INTERVAL_S) {
         max_connectable_time = v * 1000;
       }
     }
