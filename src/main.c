@@ -378,6 +378,11 @@ static void APP_Tick(void)
   }
 }
 
+/* timer callback will be called out of BTLE_StackTick before all BTLE handling is done.
+It is still unclear to me if calling BTLE methods out of here is okay - but it seems to work.
+(BLE timers are processed first and we might change expectations between timer op and stack execution?)
+Doing any type of timer activity should be alright - but is also not really documented anywhere.
+(Do we change the internal timer list while it is being iterated?) */
 void HAL_VTimerTimeoutCallback(uint8_t timerNum)
 {
   if (timerNum == SENSOR_TIMER) {
