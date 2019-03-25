@@ -451,6 +451,17 @@ int main(void)
   while(1) {
     BTLE_StackTick();
     BLETick();
+    if(BlueNRG_WakeupSource() == WAKEUP_IO11) {
+      button_handle();
+      if(APP_FLAG(ADC_IDLE_CONVERSION_REQUEST) && !APP_FLAG(ADC_LOAD_CONVERSION_IN_PROGRESS) && !APP_FLAG(CONNECTABLE) && !APP_FLAG(CONNECTED)) {
+        /* No radio activity, button pressed so likely there was none lately, assume mostly idle and do battery level conversion */
+        /* Actually, this does not make sense as the button press is a quite battery draining activity. Rethink at some point :-) */
+        APP_FLAG_CLEAR(ADC_IDLE_CONVERSION_REQUEST);
+        APP_FLAG_SET(ADC_IDLE_CONVERSION_IN_PROGRESS);
+        adc_trigger_read_battery();
+        HAL_VTimerStart_ms(ADC_TIMER, BATTERY_MEASUREMENT_TIME);
+      }
+    }
 
     APP_Tick();
     WDG_Reload();
@@ -460,16 +471,7 @@ int main(void)
     I don't know if there is a bug in the library somewhere or I did another mistake. Anyway, by keeping WAKETIMER active, we get
     time tracking for free. That's a cool feature, so accept it without further digging. */
     BlueNRG_Sleep(SLEEPMODE_WAKETIMER, WAKEUP_IO11, WAKEUP_IOx_LOW << WAKEUP_IO11_SHIFT_MASK);
-    if(BlueNRG_WakeupSource() == WAKEUP_IO11) {
-      button_handle();
-      if(APP_FLAG(ADC_IDLE_CONVERSION_REQUEST) && !APP_FLAG(ADC_LOAD_CONVERSION_IN_PROGRESS) && !APP_FLAG(CONNECTABLE) && !APP_FLAG(CONNECTED)) {
-        /* No radio activity, button pressed so likely there was none lately, assume mostly idle and do battery level conversion */
-        APP_FLAG_CLEAR(ADC_IDLE_CONVERSION_REQUEST);
-        APP_FLAG_SET(ADC_IDLE_CONVERSION_IN_PROGRESS);
-        adc_trigger_read_battery();
-        HAL_VTimerStart_ms(ADC_TIMER, BATTERY_MEASUREMENT_TIME);
-      }
-    }
+    /* After a wakeup, BTLE_StackTick should always happen first so do not execute any code at the end of the main loop */
   }
 }
 

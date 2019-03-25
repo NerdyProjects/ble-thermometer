@@ -17,3 +17,5 @@
   * BMP measurement seems to take ~17ms at ~450µA
   * Sending wakeup peaks at ~10mA, otherwise similar to connection interval
   * TI White Paper SWRA349 (http://www.ti.com/lit/wp/swra349/swra349.pdf) suggests a ~25µF capacitor to handle these peak loads better. This would require a 50ms connection interval to allow the battery to reload the capacitor when there is only idle current usage.
+  * An overnight-result counting the time driven by VTimer had an error of ~120 seconds in ~10 hours. Acceptable, but quite big...
+    * This might still be another problem as it was not reproducible looking at another hour of time in the morning (deviation of 0-2 seconds / hour which is significantly less)
