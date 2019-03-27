@@ -168,6 +168,23 @@ void _debug_int(uint32_t num)
   #endif
 }
 
+void _debug_uint8(uint8_t num)
+{
+  #if DEBUG
+  char buf[3];
+  buf[2] = 0;
+  for(int i = 0; i < 2; ++i) {
+    int j = (num >> 4*i) & 0x0F;
+    if(j < 10) {
+      buf[1-i] = '0' + j;
+    } else {
+      buf[1-i] = 'A' + j - 10;
+    }
+  }
+  debug(buf);
+  #endif
+}
+
 void uart_init(void)
 {
   #if DEBUG
@@ -183,7 +200,7 @@ void uart_init(void)
   GPIO_InitStructure.GPIO_HighPwr = DISABLE;
   GPIO_Init(&GPIO_InitStructure);
 
-  UART_InitStructure.UART_BaudRate = 115200;
+  UART_InitStructure.UART_BaudRate = 460800;
   UART_InitStructure.UART_WordLengthTransmit = UART_WordLength_8b;
   UART_InitStructure.UART_WordLengthReceive = UART_WordLength_8b;
   UART_InitStructure.UART_StopBits = UART_StopBits_1;
@@ -338,6 +355,10 @@ static void APP_Tick(void)
     enable_measurement();
     led_set(LED_FAST_FLASH, 4);
   }
+  if(APP_FLAG(ADC_START_BATTERY_MEASUREMENT_TIME)) {
+    APP_FLAG_CLEAR(ADC_START_BATTERY_MEASUREMENT_TIME);
+    HAL_VTimerStart_ms(ADC_TIMER, BATTERY_MEASUREMENT_TIME);
+  }
   if(APP_FLAG(SENSOR_TIMER_ELAPSED)) {
     APP_FLAG_CLEAR(SENSOR_TIMER_ELAPSED);
     if(APP_FLAG(MEASUREMENT_ENABLED) && !APP_FLAG(SENSOR_UNAVAILABLE)) {
@@ -376,6 +397,11 @@ static void APP_Tick(void)
   if(APP_FLAG(SENSOR_UNAVAILABLE)) {
     APP_FLAG_CLEAR(MEASUREMENT_ENABLED);
   }
+  if(APP_FLAG(HANDLE_LED)) {
+    APP_FLAG_CLEAR(HANDLE_LED);
+    led_handle();
+  }
+
 }
 
 /* timer callback will be called out of BTLE_StackTick before all BTLE handling is done.
@@ -392,7 +418,7 @@ void HAL_VTimerTimeoutCallback(uint8_t timerNum)
   }
   if(timerNum == LED_TIMER) {
     debug("L\n");
-    led_handle();
+    APP_FLAG_SET(HANDLE_LED);
   }
   if(timerNum == ADC_TIMER) {
     debug("A\n");
@@ -414,7 +440,7 @@ void HAL_VTimerTimeoutCallback(uint8_t timerNum)
       APP_FLAG_CLEAR(ADC_IDLE_CONVERSION_REQUEST);
       adc_trigger_read_battery();
       APP_FLAG_SET(ADC_IDLE_CONVERSION_IN_PROGRESS);
-      HAL_VTimerStart_ms(ADC_TIMER, BATTERY_MEASUREMENT_TIME);
+      APP_FLAG_SET(ADC_START_BATTERY_MEASUREMENT_TIME);
     }
   }
 }

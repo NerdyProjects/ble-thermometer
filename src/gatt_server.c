@@ -553,6 +553,7 @@ tBleStatus Battery_Load_Update(int16_t voltage)
   return BLE_STATUS_SUCCESS;
 }
 
+/* ToDo: Make sure that a device can always be connected again if flag says so */
 static void disconnect(void) {
   APP_FLAG_CLEAR(REQUEST_DISABLE_BLE);
   if(APP_FLAG(CONNECTABLE)) {
@@ -683,19 +684,19 @@ void hci_le_connection_complete_event(uint8_t Status,
   APP_FLAG_CLEAR(CONNECTABLE);
   APP_FLAG_SET(CONNECTED);
   debug("CONN");
-  debug_int(Peer_Address[0]);
+  debug_uint8(Peer_Address[0]);
   debug(":");
-  debug_int(Peer_Address[1]);
+  debug_uint8(Peer_Address[1]);
   debug(":");
-  debug_int(Peer_Address[2]);
+  debug_uint8(Peer_Address[2]);
   debug(":");
-  debug_int(Peer_Address[3]);
+  debug_uint8(Peer_Address[3]);
   debug(":");
-  debug_int(Peer_Address[4]);
+  debug_uint8(Peer_Address[4]);
   debug(":");
-  debug_int(Peer_Address[5]);
+  debug_uint8(Peer_Address[5]);
   debug(" ");
-  debug_int(Peer_Address_Type);
+  debug_uint8(Peer_Address_Type);
   debug("\n");
   APP_FLAG_SET(START_GAP_SLAVE_SECURITY_REQUEST);
   APP_FLAG_SET(ADC_LOAD_CONVERSION_REQUEST);
@@ -724,6 +725,17 @@ void aci_gatt_attribute_modified_event(uint16_t Connection_Handle,
                                        uint16_t Attr_Data_Length,
                                        uint8_t Attr_Data[])
 {
+  debug("mod");
+  debug_int(Attr_Handle);
+  debug(" ");
+  debug_int(Offset);
+  debug(" ");
+  debug_int(Attr_Data_Length);
+  for(uint8_t i = 0; i < Attr_Data_Length; ++i) {
+    debug(" ");
+    debug_uint8(Attr_Data[i]);
+  }
+  debug("\n");
   if(Attr_Handle == recorderControlCharHandle + 1 && Offset == 0) {
     handle_recorder_control(Attr_Data, Attr_Data_Length);
   }
@@ -757,7 +769,7 @@ void aci_hal_end_of_radio_activity_event(uint8_t Last_State,
       APP_FLAG_CLEAR(ADC_LOAD_CONVERSION_REQUEST);
       APP_FLAG_SET(ADC_LOAD_CONVERSION_IN_PROGRESS);
       adc_trigger_read_battery();
-      HAL_VTimerStart_ms(ADC_TIMER, BATTERY_MEASUREMENT_TIME);
+      APP_FLAG_SET(ADC_START_BATTERY_MEASUREMENT_TIME);
     }
   }
 }

@@ -40,6 +40,9 @@ extern volatile int app_flags;
 #define STORE_RECORD_TIME_DIFFERENCE            0x4000000
 #define ALLOW_CONNECT_AFTER_DISCONNECT          0x8000000
 
+#define ADC_START_BATTERY_MEASUREMENT_TIME     0x10000000
+#define HANDLE_LED                             0x20000000
+
 
 
 /**
