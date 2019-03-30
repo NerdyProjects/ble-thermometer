@@ -48,7 +48,7 @@ This design has a few limitations that are clear even before the first prototype
 
 ## Prototype
 ![first mould form and a non-working prototype](pictures/second_molding_form.jpg)
-![first working prototype with refined form](pictures/second_molding_form.jpg)
+![first working prototype with refined form](pictures/first_working_prototype.jpg)
 
 ## System architecture
 The SPBTLE-1S is a System-on-Chip including a Cortex M0 processor, some flash and Ram, typical microcontroller peripherals and a bluetooth low energy radio.
