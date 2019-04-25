@@ -18,3 +18,4 @@
   * decrease length by ~3mm
   * move PCB a bit further to the back: Make sure it sits exactly in the middle and put enough of the viscous silicone in the front
   * have the battery side on the bottom when molding. PCB should be just on top of the mold form e.g. only battery/switch/LED underneath, PCB will be inside the second half.
+  * Put a ring around the base of the device (maybe getting rid of the handle or not) to avoid the device from falling out
