@@ -72,6 +72,7 @@ static uint32_t lastTemperatureSecondsAgo;
 #define RECORDER_CMD_SET_CONNECTION_TIMEOUT 0x8
 #define RECORDER_CMD_SET_RECONNECTABLE 0x9
 #define RECORDER_CMD_RESET_RECONNECTABLE 0x10
+#define RECORDER_CMD_READ_TIME 0x11
 
 #define RECORDER_META_INVALID 0x0
 #define RECORDER_META_STOP_MEASUREMENT 0x0002
@@ -156,6 +157,44 @@ static uint16_t ring_count_used(void) {
   return used;
 }
 
+/* go back in the ring the given number of seconds. Returns oldest used ring address, when the data is not old enough. */
+static uint16_t ring_get_past_addr(int32_t seconds) {
+  uint16_t start = recorderRingWritePos;
+  uint16_t next = ring_addr_add(start, -1);
+  seconds -= lastTemperatureSecondsAgo;
+  uint16_t measurementInterval = get_measurement_interval();
+  while(seconds > 0) {
+    uint16_t v = recorderRing[next];
+    if(v & RECORDER_META_MASK) {
+      if(v & RECORDER_META_MEASUREMENT_INTERVAL) {
+        measurementInterval = v & 0x0FFF;
+      }
+      if(v & RECORDER_META_TIME_ELAPSED) {
+        uint32_t elapsed = v & 0x3FFF;
+        uint16_t peek = recorderRing[ring_addr_add(next, -1)];
+        if((peek & RECORDER_META_MASK) && (peek & RECORDER_META_MEASUREMENT_INTERVAL)) {
+          /* two packet time elapsed: older (this one) is LSB */
+          elapsed = (elapsed << 14) | peek & 0x3FFF;
+          next = ring_addr_add(next, -1);
+        }
+        seconds -= elapsed;
+      }
+      if(v & RECORDER_META_INVALID) {
+        /* invalid packet marks end of recorded data -> stop here */
+        return ring_addr_add(next, 1);
+      }
+    } else {
+      seconds -= measurementInterval;
+    }
+    next = ring_addr_add(next, -1);
+    if(next == start) {
+      /* worked through ring without finding old enough point -> return whole ring */
+      return ring_addr_add(next, 1);
+    }
+  }
+  return ring_addr_add(next, 1);
+}
+
 void handle_recorder_control(uint8_t *data, uint16_t length) {
   if(length >= 3) {
     uint16_t v = data[1] + (data[2] << 8);
@@ -163,6 +202,13 @@ void handle_recorder_control(uint8_t *data, uint16_t length) {
       uint16_t readLength = v;
       recorderReadLast = ring_addr_add(recorderRingWritePos, -readLength);
       recorderReadNext = ring_addr_add(recorderRingWritePos, -1);
+      APP_FLAG_SET(READ_RECORDER_BUFFER);
+      APP_FLAG_SET(TRIGGER_DATA_TRANSFER);
+    }
+    if(data[0] == RECORDER_CMD_READ_TIME) {
+      int32_t readSeconds = v * 60;
+      recorderReadNext = ring_addr_add(recorderRingWritePos, -1);
+      recorderReadLast = ring_get_past_addr(readSeconds);
       APP_FLAG_SET(READ_RECORDER_BUFFER);
       APP_FLAG_SET(TRIGGER_DATA_TRANSFER);
     }
@@ -624,9 +670,8 @@ void BLETick(void) {
       buf[i] = recorderRing[recorderReadNext];
       if(recorderReadNext == recorderReadLast) {
         done = 1;
-      } else {
-        recorderReadNext = ring_addr_add(recorderReadNext, -1);
       }
+      recorderReadNext = ring_addr_add(recorderReadNext, -1);
     }
     ret = aci_gatt_update_char_value_ext(connection_handle, recorderServHandle, recorderDataCharHandle, 0x02, DATA_PACKET_SIZE, 0, DATA_PACKET_SIZE, (uint8_t *)buf);
     if(ret != BLE_STATUS_INSUFFICIENT_RESOURCES) {
@@ -646,7 +691,6 @@ void BLETick(void) {
       debug("TX BUF full, retry...\n");
       recorderReadNext = recorderReadNext_retry;
     }
-
   }
 }
 
