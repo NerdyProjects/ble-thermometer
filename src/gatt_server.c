@@ -63,9 +63,9 @@ static uint32_t lastTemperatureSecondsAgo;
 #define COPY_RECORDER_DATA_UUID(uuid_struct) COPY_UUID_128(uuid_struct,0x8c,0x81,0x71,0x50,0xdf,0xc8,0xf4,0x5d,0x7d,0x8e,0xe8,0xa5,0x39,0xc4,0xa1,0x01)
 
 #define RECORDER_CMD_READ 0x1
-#define RECORDER_CMD_STOP_MEASUREMENT 0x2
-#define RECORDER_CMD_START_MEASUREMENT 0x3
-#define RECORDER_CMD_SET_MEASUREMENT_INTERVAL 0x4
+#define RECORDER_CMD_STOP_RECORDING 0x2
+#define RECORDER_CMD_START_RECORDING 0x3
+#define RECORDER_CMD_SET_RECORDING_INTERVAL 0x4
 #define RECORDER_CMD_RESET_STORAGE 0x5
 #define RECORDER_CMD_RESET_TO_OTA 0x6
 #define RECORDER_CMD_SET_CONNECTABLE_TIMEOUT 0x7
@@ -75,9 +75,9 @@ static uint32_t lastTemperatureSecondsAgo;
 #define RECORDER_CMD_READ_TIME 0x11
 
 #define RECORDER_META_INVALID 0x0
-#define RECORDER_META_STOP_MEASUREMENT 0x0002
-#define RECORDER_META_START_MEASUREMENT 0x0003
-#define RECORDER_META_MEASUREMENT_INTERVAL 0x1000 /* 0x1000-0x1FFF -> 12 bit */
+#define RECORDER_META_STOP_RECORDING 0x0002
+#define RECORDER_META_START_RECORDING 0x0003
+#define RECORDER_META_RECORDING_INTERVAL 0x1000 /* 0x1000-0x1FFF -> 12 bit */
 #define RECORDER_META_TIME_ELAPSED 0x4000 /* 0x4000-0x7FFF -> 14 bits. If used twice without other dataset in between, interpreted as 28 bit number, LSB first. */
 #define RECORDER_META_MASK 0x8000
 
@@ -121,19 +121,19 @@ void ring_push_meta(uint16_t data)
   ring_push(data | 0x8000);
 }
 
-void recorder_enable_measurement(void) {
+void recorder_enable_recording(void) {
   APP_FLAG_SET(RECORDING_ENABLED);
   APP_FLAG_SET(STORE_RECORD_TIME_DIFFERENCE);
-  ring_push_meta(RECORDER_CMD_START_MEASUREMENT);
+  ring_push_meta(RECORDER_META_START_RECORDING);
 }
 
-void recorder_disable_measurement(void) {
+void recorder_disable_recording(void) {
   APP_FLAG_CLEAR(RECORDING_ENABLED);
-  ring_push_meta(RECORDER_CMD_STOP_MEASUREMENT);
+  ring_push_meta(RECORDER_META_STOP_RECORDING);
 }
 
-void recorder_set_measurement_interval(uint16_t interval_seconds) {
-  ring_push_meta(RECORDER_META_MEASUREMENT_INTERVAL | interval_seconds);
+void recorder_set_recording_interval(uint16_t interval_seconds) {
+  ring_push_meta(RECORDER_META_RECORDING_INTERVAL | interval_seconds);
 }
 
 void recorder_ring_clear(void) {
@@ -166,15 +166,15 @@ static uint16_t ring_get_past_addr(int32_t seconds) {
   while(seconds > 0) {
     uint16_t v = recorderRing[next];
     if(v & RECORDER_META_MASK) {
-      if(v & RECORDER_META_MEASUREMENT_INTERVAL) {
+      if(v & RECORDER_META_RECORDING_INTERVAL) {
         measurementInterval = v & 0x0FFF;
       }
       if(v & RECORDER_META_TIME_ELAPSED) {
         uint32_t elapsed = v & 0x3FFF;
         uint16_t peek = recorderRing[ring_addr_add(next, -1)];
-        if((peek & RECORDER_META_MASK) && (peek & RECORDER_META_MEASUREMENT_INTERVAL)) {
+        if((peek & RECORDER_META_MASK) && (peek & RECORDER_META_TIME_ELAPSED)) {
           /* two packet time elapsed: older (this one) is LSB */
-          elapsed = (elapsed << 14) | peek & 0x3FFF;
+          elapsed = (elapsed << 14) | (peek & 0x3FFF);
           next = ring_addr_add(next, -1);
         }
         seconds -= elapsed;
@@ -212,13 +212,13 @@ void handle_recorder_control(uint8_t *data, uint16_t length) {
       APP_FLAG_SET(READ_RECORDER_BUFFER);
       APP_FLAG_SET(TRIGGER_DATA_TRANSFER);
     }
-    if(data[0] == RECORDER_CMD_START_MEASUREMENT) {
-      APP_FLAG_SET(REQUEST_ENABLE_MEASUREMENT);
+    if(data[0] == RECORDER_CMD_START_RECORDING) {
+      APP_FLAG_SET(REQUEST_ENABLE_RECORDING);
     }
-    if(data[0] == RECORDER_CMD_STOP_MEASUREMENT) {
-      APP_FLAG_SET(REQUEST_DISABLE_MEASUREMENT);
+    if(data[0] == RECORDER_CMD_STOP_RECORDING) {
+      APP_FLAG_SET(REQUEST_DISABLE_RECORDING);
     }
-    if(data[0] == RECORDER_CMD_SET_MEASUREMENT_INTERVAL) {
+    if(data[0] == RECORDER_CMD_SET_RECORDING_INTERVAL) {
       uint16_t interval_seconds = v;
       if(interval_seconds >= 1 && interval_seconds < MAX_MEASUREMENT_INTERVAL_S) {
         set_measurement_interval(interval_seconds);

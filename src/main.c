@@ -271,9 +271,9 @@ void button_handle(void) {
         APP_FLAG_SET(SET_PUBLIC_CONNECTABLE);
       } else if(pressDuration > 1500) {
         if(APP_FLAG(MEASUREMENT_ENABLED)) {
-          APP_FLAG_SET(REQUEST_DISABLE_MEASUREMENT);
+          APP_FLAG_SET(REQUEST_DISABLE_RECORDING);
         } else {
-          APP_FLAG_SET(REQUEST_ENABLE_MEASUREMENT);
+          APP_FLAG_SET(REQUEST_ENABLE_RECORDING);
         }
       } else if(pressDuration > 300) {
         /* (de)activate bluetooth connection */
@@ -295,7 +295,6 @@ void enable_measurement(void)
   sensor_init();
   if(!APP_FLAG(SENSOR_UNAVAILABLE)) {
     next_sensor_interval = HAL_VTimerGetCurrentTime_sysT32();
-    recorder_enable_measurement();
     /* initially measure sensor now */
     APP_FLAG_SET(MEASUREMENT_ENABLED);
     HAL_VTimerStart_ms(SENSOR_TIMER, 100);
@@ -316,13 +315,13 @@ void disable_measurement(void)
   APP_FLAG_CLEAR(MEASUREMENT_ENABLED);
   APP_FLAG_CLEAR(SENSOR_MEASUREMENT_TRIGGERED);
   sensor_deinit();
-  recorder_disable_measurement();
+  recorder_disable_recording();
 }
 
 void set_measurement_interval(uint16_t seconds)
 {
   /* update recorder with measurement interval _previous_ to this update */
-  recorder_set_measurement_interval(get_measurement_interval());
+  recorder_set_recording_interval(get_measurement_interval());
   sensor_update_rate = seconds * 1000;
 }
 
@@ -344,16 +343,25 @@ static void trigger_sensor_measurement(void) {
 
 static void APP_Tick(void)
 {
-  if(APP_FLAG(REQUEST_DISABLE_MEASUREMENT)) {
-    APP_FLAG_CLEAR(REQUEST_DISABLE_MEASUREMENT);
+  if(APP_FLAG(REQUEST_DISABLE_RECORDING)) {
+    APP_FLAG_CLEAR(REQUEST_DISABLE_RECORDING);
     disable_measurement();
-    APP_FLAG_CLEAR(REQUEST_DISABLE_MEASUREMENT);
+    APP_FLAG_CLEAR(REQUEST_DISABLE_RECORDING);
     led_set(LED_FAST_FLASH, 2);
   }
-  if(APP_FLAG(REQUEST_ENABLE_MEASUREMENT)) {
-    APP_FLAG_CLEAR(REQUEST_ENABLE_MEASUREMENT);
+  if(APP_FLAG(REQUEST_ENABLE_RECORDING)) {
+    APP_FLAG_CLEAR(REQUEST_ENABLE_RECORDING);
     enable_measurement();
+    recorder_enable_recording();
     led_set(LED_FAST_FLASH, 4);
+  }
+  if(APP_FLAG(CONNECTED) && !APP_FLAG(MEASUREMENT_ENABLED)) {
+    /* always measure while a connection is active */
+    enable_measurement();
+  }
+  if(!APP_FLAG(CONNECTED) && !APP_FLAG(RECORDING_ENABLED)) {
+    /* stop measurement again when disconnected and not recording */
+    disable_measurement();
   }
   if(APP_FLAG(ADC_START_BATTERY_MEASUREMENT_TIME)) {
     APP_FLAG_CLEAR(ADC_START_BATTERY_MEASUREMENT_TIME);
@@ -395,7 +403,7 @@ static void APP_Tick(void)
     }
   }
   if(APP_FLAG(SENSOR_UNAVAILABLE)) {
-    APP_FLAG_CLEAR(MEASUREMENT_ENABLED);
+    disable_measurement();
   }
   if(APP_FLAG(HANDLE_LED)) {
     APP_FLAG_CLEAR(HANDLE_LED);

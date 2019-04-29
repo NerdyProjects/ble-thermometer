@@ -32,8 +32,8 @@ extern volatile int app_flags;
 
 #define REQUEST_LOW_POWER_CONNECTION_PARAMETERS  0x0100000
 #define REQUEST_DISABLE_BLE                              0x0200000
-#define REQUEST_DISABLE_MEASUREMENT              0x0400000
-#define REQUEST_ENABLE_MEASUREMENT               0x0800000
+#define REQUEST_DISABLE_RECORDING              0x0400000
+#define REQUEST_ENABLE_RECORDING               0x0800000
 
 #define REQUEST_RING_CLEAR                      0x1000000
 #define RECORDING_ENABLED                       0x2000000
