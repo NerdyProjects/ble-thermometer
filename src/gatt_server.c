@@ -128,8 +128,10 @@ void recorder_enable_recording(void) {
 }
 
 void recorder_disable_recording(void) {
-  APP_FLAG_CLEAR(RECORDING_ENABLED);
-  ring_push_meta(RECORDER_META_STOP_RECORDING);
+  if(APP_FLAG(RECORDING_ENABLED)) {
+    APP_FLAG_CLEAR(RECORDING_ENABLED);
+    ring_push_meta(RECORDER_META_STOP_RECORDING);
+  }
 }
 
 void recorder_set_recording_interval(uint16_t interval_seconds) {

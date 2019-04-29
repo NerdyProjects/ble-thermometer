@@ -354,11 +354,11 @@ static void APP_Tick(void)
     recorder_enable_recording();
     led_set(LED_FAST_FLASH, 4);
   }
-  if(APP_FLAG(CONNECTED) && !APP_FLAG(MEASUREMENT_ENABLED)) {
+  if(!APP_FLAG(MEASUREMENT_ENABLED) && APP_FLAG(CONNECTED) && !APP_FLAG(MEASUREMENT_ENABLED)) {
     /* always measure while a connection is active */
     enable_measurement();
   }
-  if(!APP_FLAG(CONNECTED) && !APP_FLAG(RECORDING_ENABLED)) {
+  if(APP_FLAG(MEASUREMENT_ENABLED) && !APP_FLAG(CONNECTED) && !APP_FLAG(RECORDING_ENABLED)) {
     /* stop measurement again when disconnected and not recording */
     disable_measurement();
   }
