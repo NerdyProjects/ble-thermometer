@@ -113,12 +113,12 @@ static void ring_push(uint16_t data)
 
 void ring_push_data(uint16_t data)
 {
-  ring_push(data & 0x7FFF);
+  ring_push(data & (RECORDER_META_MASK-1));
 }
 
 void ring_push_meta(uint16_t data)
 {
-  ring_push(data | 0x8000);
+  ring_push(data | RECORDER_META_MASK);
 }
 
 void recorder_enable_recording(void) {
@@ -137,13 +137,14 @@ void recorder_set_recording_interval(uint16_t interval_seconds) {
 }
 
 void recorder_ring_clear(void) {
-  uint8_t reenable_measurement = APP_FLAG(MEASUREMENT_ENABLED);
+  uint8_t reenable_recording = APP_FLAG(RECORDING_ENABLED);
   disable_measurement();
-  for(uint16_t i = 0; i <= RECORDER_RING_SIZE; ++i) {
+  for(uint16_t i = 0; i < RECORDER_RING_SIZE; ++i) {
     ring_push_meta(RECORDER_META_INVALID);
   }
-  if(reenable_measurement) {
+  if(reenable_recording) {
     enable_measurement();
+    recorder_enable_recording();
   }
 }
 
@@ -159,8 +160,8 @@ static uint16_t ring_count_used(void) {
 
 /* go back in the ring the given number of seconds. Returns oldest used ring address, when the data is not old enough. */
 static uint16_t ring_get_past_addr(int32_t seconds) {
-  uint16_t start = recorderRingWritePos;
-  uint16_t next = ring_addr_add(start, -1);
+  uint16_t start = ring_addr_add(recorderRingWritePos, -1);
+  uint16_t next = start;
   seconds -= lastTemperatureSecondsAgo;
   uint16_t measurementInterval = get_measurement_interval();
   while(seconds > 0) {
@@ -179,7 +180,7 @@ static uint16_t ring_get_past_addr(int32_t seconds) {
         }
         seconds -= elapsed;
       }
-      if(v & RECORDER_META_INVALID) {
+      if(v == (RECORDER_META_MASK | RECORDER_META_INVALID)) {
         /* invalid packet marks end of recorded data -> stop here */
         return ring_addr_add(next, 1);
       }

@@ -306,7 +306,6 @@ static void APP_Init(void)
   led_init();
   recorder_ring_clear();
   Add_Services();
-  enable_measurement();
 }
 
 
